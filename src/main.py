@@ -1,6 +1,11 @@
-# Это основной запускаемый файл.
-# Заменить содержимое своим кодом.
+from fastapi import FastAPI
+from core.config import settings
 
-import sys
 
-print(sys.path)
+# Создание объекта приложения.
+app = FastAPI(title=settings.app_title)
+
+
+@app.get('/')
+def read_root():
+    return {'Hello': 'FastAPI'}
