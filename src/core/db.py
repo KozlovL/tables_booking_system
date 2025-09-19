@@ -6,10 +6,12 @@ from src.core.config import settings
 
 
 class PreBase:
+    """Базовый класс для всех моделей SQLAlchemy."""
 
     @declared_attr
-    def __tablename__(cls):
-        return cls.__name__.lower()
+    def __tablename__(self) -> str:
+        """Автоматически генерирует имя таблицы из имени класса."""
+        return self.__name__.lower()
 
     id = Column(Integer, primary_key=True)
 
