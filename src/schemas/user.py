@@ -9,7 +9,9 @@ from src.core.constants import (
     USERNAME_MIN_LENGTH,
     PHONE_MAX_LENGTH,
     PHONE_MIN_LENGTH,
-    TG_ID_MAX_LENGTH
+    TG_ID_MAX_LENGTH,
+    SUPERUSER_DEFAULT_USERNAME,
+    SUPERUSER_DEFAULT_PHONE
 )
 
 
@@ -53,3 +55,12 @@ class UserShort(BaseModel):
     email: Optional[str] = None
     phone: str
     is_active: bool
+
+
+class SuperUserCreate(schemas.BaseUserCreate):
+    """Схема для создания суперпользователя с минимальными данными."""
+
+    username: str = Field(default=SUPERUSER_DEFAULT_USERNAME,
+                          max_length=USERNAME_MAX_LENGTH)
+    phone: str = Field(default=SUPERUSER_DEFAULT_PHONE,
+                       max_length=PHONE_MAX_LENGTH)
