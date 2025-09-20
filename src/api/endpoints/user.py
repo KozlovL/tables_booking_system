@@ -1,7 +1,13 @@
-from fastapi import APIRouter
+from typing import List
 
-from src.core.user import auth_backend, fastapi_users
-from src.schemas.user import UserCreate, UserRead, UserUpdate
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.core.db import get_async_session
+from src.core.user import auth_backend, current_superuser, fastapi_users
+from src.models import User
+from src.schemas import UserCreate, UserRead, UserUpdate
 
 router = APIRouter()
 
@@ -18,11 +24,24 @@ router.include_router(
 
 users_router = fastapi_users.get_users_router(UserRead, UserUpdate)
 
-users_router.routes = [
-    rout for rout in users_router.routes if rout.name != 'users:delete_user'
-]
 router.include_router(
     users_router,
     prefix='/users',
     tags=['users'],
 )
+
+
+@router.get('/users', response_model=List[UserRead], tags=['users'])
+async def get_users(
+    show_all: bool = Query(False, description='Показать всех пользователей'),
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(current_superuser)
+):
+    """Получение списка пользователей (только для администратора)."""
+    query = select(User)
+    if not show_all:
+        query = query.where(User.is_active is True)
+
+    result = await session.execute(query)
+    users = result.scalars().all()
+    return users
