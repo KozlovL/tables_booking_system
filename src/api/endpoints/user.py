@@ -22,14 +22,6 @@ router.include_router(
     tags=['auth'],
 )
 
-users_router = fastapi_users.get_users_router(UserRead, UserUpdate)
-
-router.include_router(
-    users_router,
-    prefix='/users',
-    tags=['users'],
-)
-
 
 @router.get('/users', response_model=List[UserRead], tags=['users'])
 async def get_users(
@@ -45,3 +37,11 @@ async def get_users(
     result = await session.execute(query)
     users = result.scalars().all()
     return users
+
+users_router = fastapi_users.get_users_router(UserRead, UserUpdate)
+
+router.include_router(
+    users_router,
+    prefix='/users',
+    tags=['users'],
+)
