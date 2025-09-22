@@ -1,11 +1,15 @@
 from __future__ import annotations
+
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, EmailStr, AnyUrl, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 # Короткая версия для отдачи наружу
 class UserShort(BaseModel):
+    """Схема данные юзера для отдачи наружу"""
+
     id: int
     username: str                 # required
     phone: str                    # required
@@ -15,6 +19,8 @@ class UserShort(BaseModel):
 
 
 class CafeCreate(BaseModel):
+    """Схема для создания Кафе"""
+
     name: str
     address: str
     phone: str
@@ -22,7 +28,10 @@ class CafeCreate(BaseModel):
     photo: Optional[str] = None              # base64 строка
     managers: List[int] = []                 # список ID менеджеров
 
+
 class CafeRead(BaseModel):
+    """Схема выдачи кафе наружу"""
+
     id: int
     name: str
     address: str
@@ -33,5 +42,3 @@ class CafeRead(BaseModel):
     updated_at: datetime
     managers: List[UserShort]
     model_config = ConfigDict(from_attributes=True)
-
-

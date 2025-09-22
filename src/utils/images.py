@@ -1,8 +1,12 @@
 # src/utils/images.py
-import base64, binascii, os, uuid
+import base64
+import binascii
+import os
+import uuid
 
 MEDIA_ROOT = "media/cafes"
 MEDIA_URL_PREFIX = "/media/cafes"
+
 
 def save_base64_image(b64: str) -> str:
     if not b64:
@@ -26,6 +30,7 @@ def save_base64_image(b64: str) -> str:
     with open(fpath, "wb") as f:
         f.write(raw)
     return f"{MEDIA_URL_PREFIX}/{fname}"  # кладём в БД
+
 
 def file_url_to_base64(url: str | None) -> str | None:
     if not url:

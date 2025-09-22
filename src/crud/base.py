@@ -1,8 +1,9 @@
 # app/crud/base.py
-from typing import Optional, Any, Iterable
+from typing import Iterable
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import InstrumentedAttribute
+
 
 class CRUDBase:
     def __init__(self, model):
@@ -10,7 +11,7 @@ class CRUDBase:
 
     async def get(self, obj_id: int, session: AsyncSession):
         res = await session.execute(
-            select(self.model).where(self.model.id == obj_id)
+            select(self.model).where(self.model.id == obj_id),
         )
         return res.scalar_one_or_none()
 
@@ -21,13 +22,12 @@ class CRUDBase:
         res = await session.execute(stmt)
         return list(res.scalars())
 
-
     async def create(self,
                      obj_in,
                      session: AsyncSession,
                      *,
                      exclude_fields: set[str] | None = None,
-                     **extra_fields
+                     **extra_fields,
                      ):
         data = obj_in.model_dump(exclude_unset=True) if (
             hasattr(obj_in, "model_dump")) else dict(obj_in)
@@ -40,7 +40,6 @@ class CRUDBase:
         session.add(db_obj)
         await session.flush()
         return db_obj
-
 
     async def update(
         self,

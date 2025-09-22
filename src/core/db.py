@@ -2,9 +2,18 @@
 from datetime import datetime
 from typing import AsyncGenerator
 
-from sqlalchemy import Boolean, Column, func, Integer, DateTime, MetaData
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.orm import declarative_base, declared_attr, Mapped, mapped_column
+from sqlalchemy import Boolean, Column, DateTime, Integer, MetaData, func
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.orm import (
+    Mapped,
+    declarative_base,
+    declared_attr,
+    mapped_column,
+)
 
 from src.core.config import settings
 
@@ -16,6 +25,7 @@ naming_convention = {
     "pk": "pk_%(table_name)s",
 }
 
+
 class PreBase:
     metadata = MetaData(naming_convention=naming_convention)
 
@@ -25,19 +35,22 @@ class PreBase:
 
     id = Column(Integer, primary_key=True)
 
+
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
+
 class ActiveMixin:
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
 
 Base = declarative_base(cls=PreBase)
 
 
 engine = create_async_engine(
-    settings.database_url,   # или settings.DATABASE_URL — как у тебя в конфиге
-    echo=False,              # при необходимости True для дебага
+    settings.database_url,
+    echo=False,
     future=True,
 )
 
@@ -47,6 +60,7 @@ AsyncSessionLocal = async_sessionmaker(
     expire_on_commit=False,   # чтобы объекты не "протухали" после commit()
     autoflush=False,          # ручной контроль за flush()
 )
+
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:

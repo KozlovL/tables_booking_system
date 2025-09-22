@@ -1,13 +1,7 @@
-
+from sqlalchemy import Column, ForeignKey, Integer, String, Table, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import (Column, ForeignKey, String,
-                        Integer, Time, Text,
-                        Numeric, Table
-                        )
 
-
-from src.core.db import Base, TimestampMixin, ActiveMixin
-
+from src.core.db import ActiveMixin, Base, TimestampMixin
 
 #Определяем таблицу-связку
 cafe_managers_table = Table(
@@ -24,17 +18,23 @@ cafe_managers_table = Table(
 
 class Cafe(Base, TimestampMixin, ActiveMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(128), index=True, unique=True, nullable=False)
-    address: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
-    phone: Mapped[str | None] = mapped_column(String(32), index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(128),
+                                      index=True,
+                                      unique=True,
+                                      nullable=False,
+                                      )
+    address: Mapped[str] = mapped_column(String(255),
+                                         index=True,
+                                         nullable=False,
+                                         )
+    phone: Mapped[str | None] = mapped_column(String(32),
+                                              index=True,
+                                              nullable=False,
+                                              )
     description: Mapped[str | None] = mapped_column(Text)
     photo: Mapped[str | None] = mapped_column(String(255))
     managers = relationship(
         "User",
         secondary=cafe_managers_table,
-        back_populates="managed_cafes"
+        back_populates="managed_cafes",
     )
-
-
-
-
