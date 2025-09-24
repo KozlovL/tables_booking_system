@@ -1,11 +1,14 @@
-from sqlalchemy import Column, Integer, ForeignKey, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, ForeignKey,
 from src.core.db import Base
 
 
-class TableModel(Base):
-    __tablename__ = "tables"
+class TableModel(Base):   #добавь миксины
+    __tablename__ = 'tables'
 
-    description = Column(Text, nullable=True)
-    seats_number = Column(Integer, nullable=False)
-    cafe = Column(Integer, ForeignKey("cafes.id"), nullable=False)
+    cafe_id: Mapped[int] = mapped_column(
+        ForeignKey('cafe.id'), nullable=False
+    )
+    seats_number: Mapped[int] = mapped_column(nullable=False)
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
+
