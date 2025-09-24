@@ -46,3 +46,17 @@ class CafeUpdate(BaseModel):
     active: Optional[bool] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CafeShort(BaseModel):
+    """Схема выдачи кафе наружу кратко"""
+
+    id: int
+    name: str
+    address: str
+    phone: PhoneNumber
+    description: Optional[str] = None
+    photo: Optional[str] = None
+    active: bool
+    managers: List[UserShort]
+    model_config = ConfigDict(from_attributes=True)
