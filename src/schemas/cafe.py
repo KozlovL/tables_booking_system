@@ -3,19 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, Field
 
-
-# Короткая версия для отдачи наружу
-class UserShort(BaseModel):
-    """Схема данные юзера для отдачи наружу"""
-
-    id: int
-    username: str                 # required
-    phone: str                    # required
-    active: bool                  # required
-    email: EmailStr | None = None
-    model_config = ConfigDict(from_attributes=True)
+from src.core.types import PhoneNumber
+from src.schemas.user import UserShort
 
 
 class CafeCreate(BaseModel):
@@ -23,7 +14,7 @@ class CafeCreate(BaseModel):
 
     name: str
     address: str
-    phone: str
+    phone: PhoneNumber
     description: Optional[str] = None
     photo: Optional[str] = None              # base64 строка
     managers: List[int] = []                 # список ID менеджеров
@@ -35,10 +26,23 @@ class CafeRead(BaseModel):
     id: int
     name: str
     address: str
-    phone: Optional[str] = None
+    phone: PhoneNumber
     description: Optional[str] = None
+    photo: Optional[str] = None
     active: bool
+    managers: List[UserShort]
     created_at: datetime
     updated_at: datetime
-    managers: List[UserShort]
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CafeUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=128)
+    address: Optional[str] = Field(None, min_length=1, max_length=255)
+    phone: Optional[str] = None          # у тебя может быть regex
+    description: Optional[str] = None
+    photo: Optional[str] = None          # base64 или None (стереть)
+    managers: Optional[List[int]] = None # если передано — переопределяем список
+    active: Optional[bool] = None
+
     model_config = ConfigDict(from_attributes=True)

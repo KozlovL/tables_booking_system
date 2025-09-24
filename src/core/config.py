@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     database_url: str
     secret: str
     jwt_algorithm: str = "HS256"
-    access_token_expire_min: int = 30
+    access_token_expire_min: int = 120
     bcrypt_rounds: int = 12
     first_superuser_username: Optional[str] = None
     first_superuser_phone: Optional[str] = None

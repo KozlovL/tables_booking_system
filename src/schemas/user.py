@@ -3,13 +3,21 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, constr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-PhoneNumber = constr(
-    pattern=r'^\+?[1-9]\d{7,14}$',
-    min_length=10,
-    max_length=15,
-)
+from src.core.types import PhoneNumber
+
+
+# Короткая версия для отдачи наружу
+class UserShort(BaseModel):
+    """Схема данные юзера для отдачи наружу"""
+
+    id: int
+    username: str                 # required
+    phone: str                    # required
+    active: bool                  # required
+    email: EmailStr | None = None
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserCreate(BaseModel):
@@ -36,16 +44,6 @@ class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# class UserUpdateMe(BaseModel):
-#     """Схема польз сам меняет данные о себе, поле актив изменить нельзя """
-#     username: Optional[str] = Field(None, min_length=3, max_length=128)
-#     email: Optional[EmailStr] = None
-#     phone: PhoneNumber = None
-#     tg_id: Optional[str] = None
-#     password: Optional[str] = None
-#     active: bool
-
-
 class UserUpdate(BaseModel):
     """Схема админ меняет данные пользователя"""
 
@@ -54,4 +52,4 @@ class UserUpdate(BaseModel):
     phone: PhoneNumber = None
     tg_id: Optional[str] = None
     password: Optional[str] = None
-    active: bool
+    active: Optional[bool] = None

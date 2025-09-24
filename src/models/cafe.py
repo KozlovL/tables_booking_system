@@ -32,9 +32,10 @@ class Cafe(Base, TimestampMixin, ActiveMixin):
                                               nullable=False,
                                               )
     description: Mapped[str | None] = mapped_column(Text)
-    photo: Mapped[str | None] = mapped_column(String(255))
+    photo: Mapped[str | None] = mapped_column(Text)
     managers = relationship(
         "User",
         secondary=cafe_managers_table,
         back_populates="managed_cafes",
+        lazy="selectin",
     )

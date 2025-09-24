@@ -15,10 +15,8 @@ class CRUDBase:
         )
         return res.scalar_one_or_none()
 
-    async def get_multi(self, session: AsyncSession, *, limit: int | None = None, offset: int = 0):
-        stmt = select(self.model).offset(offset)
-        if limit:
-            stmt = stmt.limit(limit)
+    async def get_multi(self, session: AsyncSession):
+        stmt = select(self.model)
         res = await session.execute(stmt)
         return list(res.scalars())
 
@@ -48,7 +46,9 @@ class CRUDBase:
         session: AsyncSession,
         updatable_fields: Iterable[str] | None = None,
     ):
-        data = obj_in.model_dump(exclude_unset=True) if hasattr(obj_in, "model_dump") else dict(obj_in)
+        data = (
+            obj_in.model_dump(exclude_unset=True)) \
+            if hasattr(obj_in, "model_dump") else dict(obj_in)
 
         # ограничим обновление только колонками модели
         cols = {c.name for c in db_obj.__table__.columns}

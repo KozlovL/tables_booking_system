@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import AsyncGenerator
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, MetaData, func
+from sqlalchemy import Boolean, DateTime, MetaData, func
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -27,13 +27,15 @@ naming_convention = {
 
 
 class PreBase:
+    """Базовый класс для всех моделей SQLAlchemy."""
+
     metadata = MetaData(naming_convention=naming_convention)
 
     @declared_attr
     def __tablename__(self) -> str:
         return self.__name__.lower()
 
-    id = Column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
 
 
 class TimestampMixin:

@@ -14,7 +14,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 @router.post("",
              response_model=UserRead,
-             status_code=status.HTTP_201_CREATED
+             status_code=status.HTTP_201_CREATED,
              )
 async def create_user_endpoint(payload: UserCreate,
                                session: AsyncSession =
@@ -41,7 +41,10 @@ async def update_me(
     # сущность из БД
     db_user = await user_crud.get(current_user.id, session)
     if not db_user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
 
     data = payload.model_dump(exclude_unset=True)
 
@@ -58,7 +61,10 @@ async def update_me(
     return db_user
 
 
-@router.patch("/{user_id}", response_model=UserUpdate, status_code=status.HTTP_200_OK)
+@router.patch("/{user_id}",
+              response_model=UserUpdate,
+              status_code=status.HTTP_200_OK,
+              )
 async def update_user(
     user_id: int,
     payload: UserUpdate,
