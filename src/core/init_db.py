@@ -49,7 +49,6 @@ async def create_user(
         await session.refresh(user)
         return user
 
-
 async def create_first_superuser() -> None:
     """Создает суперпользователя при старте приложения."""
     if settings.first_superuser_email and settings.first_superuser_password:
