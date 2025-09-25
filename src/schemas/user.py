@@ -1,3 +1,4 @@
+
 # src/schemas/user.py
 
 from datetime import datetime
@@ -22,7 +23,7 @@ class UserShort(BaseModel):
 
 class UserCreate(BaseModel):
     """Схема создания пользователя."""
-
+    
     username: str = Field(..., min_length=3, max_length=128)
     phone: PhoneNumber # обязателен
     password: str = Field(..., min_length=6)
@@ -53,3 +54,4 @@ class UserUpdate(BaseModel):
     tg_id: Optional[str] = None
     password: Optional[str] = None
     active: Optional[bool] = None
+      

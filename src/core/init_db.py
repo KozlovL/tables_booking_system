@@ -2,6 +2,7 @@
 import logging
 
 from src.core.config import settings
+
 from src.core.db import AsyncSessionLocal
 from src.core.security import get_password_hash
 from src.crud.user import user_crud
