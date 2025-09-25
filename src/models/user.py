@@ -1,29 +1,51 @@
-from datetime import datetime, timezone
+from sqlalchemy import Boolean, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from sqlalchemy import Column, DateTime, String
-from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
-
-from src.core.db import Base
-from src.core.constants import (
-    USERNAME_MAX_LENGTH,
-    PHONE_MAX_LENGTH,
-    TG_ID_MAX_LENGTH
-)
+from src.core.db import ActiveMixin, Base, TimestampMixin
+from src.models.cafe import cafe_managers_table
 
 
-CURRENT_DATE = datetime.now(timezone.utc)
-
-
-class User(SQLAlchemyBaseUserTable[int], Base):
-    """Модель пользователя для базы данных."""
-
-    username = Column(String(USERNAME_MAX_LENGTH), nullable=False, index=True)
-    phone = Column(String(PHONE_MAX_LENGTH), nullable=False, unique=True)
-    tg_id = Column(String(TG_ID_MAX_LENGTH), nullable=True, unique=True)
-    created_at = Column(DateTime, default=CURRENT_DATE, nullable=False)
-    updated_at = Column(
-        DateTime,
-        default=CURRENT_DATE,
-        onupdate=CURRENT_DATE,
-        nullable=False
-    )
+class User(Base, TimestampMixin, ActiveMixin):
+    # Base уже создаёт id PK
+    username: Mapped[str] = mapped_column(String(128),
+                                          unique=True,
+                                          index=True,
+                                          nullable=False,
+                                          )
+    email:    Mapped[str] = mapped_column(String(320),
+                                          unique=True,
+                                          index=True,
+                                          nullable=True,
+                                          )
+    phone:    Mapped[str | None] = mapped_column(String(20),
+                                                 unique=True,
+                                                 index=True,
+                                                 nullable=False,
+                                                 doc = ("телефон "
+                                                        "пользователя в"
+                                                         "международном "
+                                                        "формате "
+                                                         "(+79991234567)"),
+                                                 )
+    hashed_password: Mapped[str] = mapped_column(String(1024),
+                                                 nullable=False,
+                                                 )
+    tg_id: Mapped[str] = mapped_column(String(),
+                                       unique=True,
+                                       nullable=True,
+                                       )
+    is_superuser: Mapped[bool] = mapped_column(Boolean,
+                                               default=False,
+                                               nullable=False,
+                                               )
+    is_verified:  Mapped[bool] = mapped_column(Boolean,
+                                               default=False,
+                                               nullable=False,
+                                               )
+    # Связь многие-ко-многим: пользователь ↔ кафе
+    managed_cafes = relationship(
+        "Cafe",
+        secondary=cafe_managers_table,
+        back_populates="managers",
+        lazy="selectin",  # ускорит выборку менеджеров вместе с кафе
+      

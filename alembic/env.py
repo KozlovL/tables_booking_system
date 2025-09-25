@@ -14,6 +14,9 @@ from alembic import context
 # Импортируем базовый класс Base.
 from src.core.base import Base
 
+from src.models import cafe
+
+
 load_dotenv('.env')
 
 # this is the Alembic Config object, which provides

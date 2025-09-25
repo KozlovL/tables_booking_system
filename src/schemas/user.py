@@ -1,66 +1,57 @@
+
+# src/schemas/user.py
+
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
-from fastapi_users import schemas
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from src.core.constants import (
-    USERNAME_MAX_LENGTH,
-    USERNAME_MIN_LENGTH,
-    PHONE_MAX_LENGTH,
-    PHONE_MIN_LENGTH,
-    TG_ID_MAX_LENGTH,
-    SUPERUSER_DEFAULT_USERNAME,
-    SUPERUSER_DEFAULT_PHONE
-)
+from src.core.types import PhoneNumber
 
 
-class UserRead(schemas.BaseUser[int]):
-    """Схема для получения пользователя."""
-
-    username: str
-    phone: str
-    tg_id: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
-
-
-class UserCreate(schemas.BaseUserCreate):
-    """Схема для создания пользователя."""
-
-    username: str = Field(min_length=USERNAME_MIN_LENGTH, 
-                          max_length=USERNAME_MAX_LENGTH)
-    phone: str = Field(min_length=PHONE_MIN_LENGTH,
-                       max_length=PHONE_MAX_LENGTH)
-    tg_id: Optional[str] = Field(None, max_length=TG_ID_MAX_LENGTH)
-
-
-class UserUpdate(schemas.BaseUserUpdate):
-    """Схема для обновления пользователя."""
-
-    username: Optional[str] = Field(None,
-                                    min_length=USERNAME_MIN_LENGTH,
-                                    max_length=USERNAME_MAX_LENGTH)
-    phone: Optional[str] = Field(None,
-                                 min_length=PHONE_MIN_LENGTH,
-                                 max_length=PHONE_MAX_LENGTH)
-    tg_id: Optional[str] = Field(None, max_length=TG_ID_MAX_LENGTH)
-
-
+# Короткая версия для отдачи наружу
 class UserShort(BaseModel):
-    """Краткая схема пользователя для вложенных объектов."""
+    """Схема данные юзера для отдачи наружу"""
+
+    id: int
+    username: str                 # required
+    phone: str                    # required
+    active: bool                  # required
+    email: EmailStr | None = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserCreate(BaseModel):
+    """Схема создания пользователя."""
+    
+    username: str = Field(..., min_length=3, max_length=128)
+    phone: PhoneNumber # обязателен
+    password: str = Field(..., min_length=6)
+    email: Optional[EmailStr] = None
+    tg_id: Optional[str] = None
+
+
+class UserRead(BaseModel):
+    """Схема выдачи полных данных по юзеру"""
 
     id: int
     username: str
-    email: Optional[str] = None
     phone: str
-    is_active: bool
+    email: Optional[EmailStr] = None
+    tg_id: Optional[str] = None
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
 
 
-class SuperUserCreate(schemas.BaseUserCreate):
-    """Схема для создания суперпользователя с минимальными данными."""
+class UserUpdate(BaseModel):
+    """Схема админ меняет данные пользователя"""
 
-    username: str = Field(default=SUPERUSER_DEFAULT_USERNAME,
-                          max_length=USERNAME_MAX_LENGTH)
-    phone: str = Field(default=SUPERUSER_DEFAULT_PHONE,
-                       max_length=PHONE_MAX_LENGTH)
+    username: Optional[str] = Field(None, min_length=3, max_length=128)
+    email: Optional[EmailStr] = None
+    phone: PhoneNumber = None
+    tg_id: Optional[str] = None
+    password: Optional[str] = None
+    active: Optional[bool] = None
+      

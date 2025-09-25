@@ -1,0 +1,1972 @@
+openapi: 3.1.4
+info:
+  title: API сервиса бронирования столов
+  version: 1.0.0
+servers:
+  - url: https://service.web.address/api/v1
+tags:
+  - name: Аутентификация
+    description: Аутентификация пользователя
+  - name: Пользователи
+    description: Управление пользователями сервиса
+  - name: Кафе
+    description: Управление кафе
+  - name: Столы
+    description: Управление столами
+  - name: Временные слоты
+    description: Управление временными слотами
+  - name: Бронирования
+    description: Управление бронированиями
+  - name: Блюда
+    description: Управление блюдами
+  - name: Акции
+    description: Управление акциями
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Аутентификация
+      summary: Аутентификация пользователя
+      operationId: UserLogin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Auth"
+        required: true
+
+      responses:
+        200:
+          description: Успешная авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/logout:
+    post:
+      tags:
+        - Аутентификация
+      operationId: UserLogout
+      summary: Выход из аккаунта
+      responses:
+        200:
+          description: Успешный выход из аккаунта
+        401:
+          description: Необходима авторизация
+      security:
+        - BearerAuth: []
+
+  /users:
+    get:
+      tags:
+        - Пользователи
+      operationId: GetUsers
+      summary: Получение списка пользователей (только для администратора)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: show_all
+          in: query
+          required: false
+          description: Показать всех пользователей (если не задан, возвращаются только пользователи с активным статусом)
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: Успешное получение списка пользователей
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        401:
+          description: Необходима авторизация
+    post:
+      tags:
+        - Пользователи
+      operationId: CreateUser
+      summary: Создание пользователя
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+        required: true
+      responses:
+        201:
+          description: Данные созданного пользователя
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /users/{user_id}:
+    get:
+      tags:
+        - Пользователи
+      operationId: GetUserByID
+      summary: Получение пользователя по ID (только для администратора)
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          description: ID пользователя
+          schema:
+            type: integer
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Данные пользователя
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        404:
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      tags:
+        - Пользователи
+      operationId: UpdateUserByID
+      summary: Обновление данных пользователя по ID (только для администратора)
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          description: ID пользователя
+          schema:
+            type: integer
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+        required: true
+      responses:
+        200:
+          description: Данные пользователя
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /users/me:
+    get:
+      tags:
+        - Пользователи
+      operationId: GetCurrentUser
+      summary: Получение данных текущего пользователя (доступно только текущему пользователю)
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Данные пользователя
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      tags:
+        - Пользователи
+      operationId: UpdateCurrentUser
+      summary: Обновление данных текущего пользователя (доступно только текущему пользователю)
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+        required: true
+      responses:
+        200:
+          description: Данные пользователя
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /cafes:
+    get:
+      tags:
+        - Кафе
+      operationId: GetCafes
+      summary: Получение списка кафе (только для администратора, пользователь - только активные)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: show_all
+          in: query
+          required: false
+          description: Показать всех кафе (если не задан, возвращаются только активные кафе)
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: Список кафе
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Cafe"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags:
+        - Кафе
+      operationId: CreateCafe
+      summary: Создание кафе (только для администратора)
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CafeCreate"
+        required: true
+      responses:
+        201:
+          description: Данные созданного кафе
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cafe"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /cafes/{cafe_id}:
+    get:
+      tags:
+        - Кафе
+      operationId: GetCafeByID
+      summary: Получение кафе по ID (только для администратора, пользователь - только активные)
+      parameters:
+        - in: path
+          name: cafe_id
+          required: true
+          description: ID кафе
+          schema:
+            type: integer
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Данные кафе
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cafe"
+        404:
+          description: Кафе не найдено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      tags:
+        - Кафе
+      operationId: UpdateCafeByID
+      summary: Обновление кафе по ID (только для администратора)
+      parameters:
+        - in: path
+          name: cafe_id
+          required: true
+          description: ID кафе
+          schema:
+            type: integer
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CafeUpdate"
+        required: true
+      responses:
+        200:
+          description: Данные кафе
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cafe"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Кафе не найдено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /cafe/{cafe_id}/tables:
+    get:
+      tags:
+        - Столы
+      operationId: GetTablesInCafe
+      summary: Получение списка столов в кафе (только для администратора и менеджера, пользователь - только активные)
+      parameters:
+        - in: path
+          name: cafe_id
+          required: true
+          description: ID кафе
+          schema:
+            type: integer
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Список столов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Table"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Кафе не найдено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags:
+        - Столы
+      operationId: CreateTable
+      summary: Создание стола в кафе (только для администратора и менеджера)
+      parameters:
+        - in: path
+          name: cafe_id
+          required: true
+          description: ID кафе
+          schema:
+            type: integer
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TableCreate"
+        required: true
+      responses:
+        201:
+          description: Данные созданного стола
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Table"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Кафе не найдено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /cafe/{cafe_id}/tables/{table_id}:
+    get:
+      tags:
+        - Столы
+      operationId: GetTableByID
+      summary: Получение стола по ID (только для администратора и менеджера, пользователь - только активные)
+      parameters:
+        - in: path
+          name: cafe_id
+          required: true
+          description: ID кафе
+          schema:
+            type: integer
+        - in: path
+          name: table_id
+          required: true
+          description: ID стола
+          schema:
+            type: integer
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Данные стола
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Table"
+        404:
+          description: Стол или кафе не найдены
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      tags:
+        - Столы
+      operationId: UpdateTableByID
+      summary: Обновление стола по ID (только для администратора и менеджера)
+      parameters:
+        - in: path
+          name: cafe_id
+          required: true
+          description: ID кафе
+          schema:
+            type: integer
+        - in: path
+          name: table_id
+          required: true
+          description: ID стола
+          schema:
+            type: integer
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TableUpdate"
+        required: true
+      responses:
+        200:
+          description: Данные стола
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Table"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Стол или кафе не найдены
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /cafe/{cafe_id}/time_slots:
+    get:
+      tags:
+        - Временные слоты
+      operationId: GetTimeSlotsInCafe
+      summary: Получение списка временных слотов в кафе (только для администратора и менеджера, пользователь - только активные)
+      parameters:
+        - in: path
+          name: cafe_id
+          required: true
+          description: ID кафе
+          schema:
+            type: integer
+        - in: query
+          name: date
+          description: Дата в формате YYYY-MM-DD (по умолчанию текущая дата)
+          schema:
+            type: string
+            format: date
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Список временных слотов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimeSlot"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Кафе не найдено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags:
+        - Временные слоты
+      operationId: CreateTimeSlot
+      summary: Создание временного слота в кафе (только для администратора и менеджера)
+      parameters:
+        - in: path
+          name: cafe_id
+          required: true
+          description: ID кафе
+          schema:
+            type: integer
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeSlotCreate"
+        required: true
+      responses:
+        201:
+          description: Данные созданного временного слота
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeSlot"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Кафе не найдено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /cafe/{cafe_id}/time_slots/{time_slot_id}:
+    get:
+      tags:
+        - Временные слоты
+      operationId: GetTimeSlotByID
+      summary: Получение временного слота по ID (только для администратора и менеджера, пользователь - только активные)
+      parameters:
+        - in: path
+          name: cafe_id
+          required: true
+          description: ID кафе
+          schema:
+            type: integer
+        - in: path
+          name: time_slot_id
+          required: true
+          description: ID временного слота
+          schema:
+            type: integer
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Данные временного слота
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeSlot"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Кафе или слот не найдены
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      tags:
+        - Временные слоты
+      operationId: UpdateTimeSlotByID
+      summary: Обновление временного слота по ID (только для администратора и менеджера)
+      parameters:
+        - in: path
+          name: cafe_id
+          required: true
+          description: ID кафе
+          schema:
+            type: integer
+        - in: path
+          name: time_slot_id
+          required: true
+          description: ID временного слота
+          schema:
+            type: integer
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeSlotUpdate"
+        required: true
+      responses:
+        200:
+          description: Обновленные данные временного слота
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeSlot"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Кафе или слот не найдены
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /actions:
+    get:
+      tags:
+        - Акции
+      operationId: GetActions
+      summary: Получение списка акций (только для администратора и менеджера, пользователь - только активные)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: cafe_id
+          in: query
+          required: false
+          description: Показать акции только в указанном кафе
+          schema:
+            type: integer
+        - name: show_all
+          in: query
+          required: false
+          description: Показать все акции (если не задан, возвращаются только акции с активным статусом)
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: Список акций
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Action"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags:
+        - Акции
+      operationId: CreateAction
+      summary: Создание акции (только для администратора и менеджера)
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionCreate"
+        required: true
+      responses:
+        201:
+          description: Данные созданной акции
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Action"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /actions/{action_id}:
+    get:
+      tags:
+        - Акции
+      operationId: GetActionByID
+      summary: Получение акции по ID (только для администратора и менеджера, пользователь - только активные)
+      parameters:
+        - in: path
+          name: action_id
+          required: true
+          description: ID акции
+          schema:
+            type: integer
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Данные акции
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Action"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Акция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      tags:
+        - Акции
+      operationId: UpdateActionByID
+      summary: Обновление акции по ID (только для администратора и менеджера)
+      parameters:
+        - in: path
+          name: action_id
+          required: true
+          description: ID акции
+          schema:
+            type: integer
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionUpdate"
+        required: true
+      responses:
+        200:
+          description: Обновленные данные акции
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Action"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Акция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /dishes:
+    get:
+      tags:
+        - Блюда
+      operationId: GetDishes
+      summary: Получение списка блюд (только для администратора и менеджера, пользователь - только активные)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: show_all
+          in: query
+          required: false
+          description: Показать все блюда (если не задан, возвращаются только блюда с активным статусом)
+          schema:
+            type: boolean
+        - name: cafe_id
+          in: query
+          required: false
+          description: Показать все блюда в кафе
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Список блюд
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Dish"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags:
+        - Блюда
+      operationId: CreateDish
+      summary: Создание блюда (только для администратора и менеджера)
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DishCreate"
+          required: true
+      responses:
+        201:
+          description: Данные созданного блюда
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dish"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /dishes/{dish_id}:
+    get:
+      tags:
+        - Блюда
+      operationId: GetDishByID
+      summary: Получение блюда по ID (только для администратора и менеджера, пользователь - только активные)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: dish_id
+          required: true
+          description: ID блюда
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Данные блюда
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dish"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Блюдо не найдено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      tags:
+        - Блюда
+      operationId: UpdateDishByID
+      summary: Обновление блюда по ID (только для администратора и менеджера)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: dish_id
+          required: true
+          description: ID блюда
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DishUpdate"
+          required: true
+      responses:
+        200:
+          description: Обновленные данные блюда
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dish"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Блюдо не найдено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /booking:
+    get:
+      tags:
+        - Бронирования
+      operationId: GetBookings
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: show_all
+          in: query
+          required: false
+          description: Показать все (для администратора и менеджера (только в своем кафе)) бронирования (если не задан, возвращаются только бронирования с активным статусом)
+          schema:
+            type: boolean
+        - name: cafe_id
+          in: query
+          required: false
+          description: Показать все бронирования в кафе
+          schema:
+            type: integer
+        - name: user_id
+          in: query
+          required: false
+          description: Показать все бронирования пользователя
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Список бронирований
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags:
+        - Бронирования
+      operationId: CreateBooking
+      summary: Создание бронирования
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingCreate"
+          required: true
+      responses:
+        201:
+          description: Данные созданного бронирования
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /booking/{booking_id}:
+    get:
+      tags:
+        - Бронирования
+      operationId: GetDishByID
+      summary: Получение блюда по ID (только для администратора и менеджера, пользователь - только активные и свои)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: booking_id
+          required: true
+          description: ID бронирования
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Данные бронирования
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Бронирование не найдено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      tags:
+        - Бронирования
+      operationId: UpdateBookingByID
+      summary: Обновление бронирования по ID (для администратора и менеджера, пользователь - только свои)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: booking_id
+          required: true
+          description: ID бронирования
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingUpdate"
+          required: true
+      responses:
+        200:
+          description: Обновленные данные бронирования
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        400:
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Необходима авторизация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Бронирование не найдено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Auth:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Email или phone
+        password:
+          type: string
+          description: Пароль пользователя
+      required:
+        - name
+        - password
+    TokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Токен авторизации
+      required:
+        - token
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Описание ошибки
+      required:
+        - message
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID записи
+        username:
+          type: string
+          description: Имя пользователя
+        email:
+          type: string
+          description: Email пользователя
+          format: email
+        phone:
+          type: string
+          description: Телефон пользователя
+        tg_id:
+          type: string
+          description: ID пользователя в Telegram
+        active:
+          type: boolean
+          description: Объект активен?
+        created_at:
+          type: string
+          description: Дата создания
+          format: date-time
+        updated_at:
+          type: string
+          description: Дата обновления
+          format: date-time
+      required:
+        - id
+        - username
+        - phone
+        - active
+        - created_at
+        - updated_at
+    UserCreate:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Имя пользователя
+        email:
+          type: string
+          description: Email пользователя
+          format: email
+        phone:
+          type: string
+          description: Телефон пользователя
+        tg_id:
+          type: string
+          description: ID пользователя в Telegram
+        password:
+          type: string
+          description: Пароль пользователя
+      required:
+        - username
+        - phone
+        - password
+    UserUpdate:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Имя пользователя
+        email:
+          type: string
+          description: Email пользователя
+          format: email
+        phone:
+          type: string
+          description: Телефон пользователя
+        tg_id:
+          type: string
+          description: ID пользователя в Telegram
+        password:
+          type: string
+          description: Пароль пользователя
+        active:
+          type: boolean
+          description: Объект активен?
+    UserShort:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID записи
+        username:
+          type: string
+          description: Имя пользователя
+        email:
+          type: string
+          description: Email пользователя
+          format: email
+        phone:
+          type: string
+          description: Телефон пользователя
+        active:
+          type: boolean
+          description: Объект активен?
+      required:
+        - id
+        - username
+        - phone
+        - active
+
+    Cafe:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID записи
+        name:
+          type: string
+          description: Название кафе
+        address:
+          type: string
+          description: Адрес кафе
+        phone:
+          type: string
+          description: Телефон кафе
+        description:
+          type: string
+          description: Описание кафе
+        photo:
+          type: string
+          description: Фото кафе в формате base64
+          format: base64
+        managers:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserShort"
+        active:
+          type: boolean
+          description: Объект активен?
+        created_at:
+          type: string
+          description: Дата создания
+          format: date-time
+        updated_at:
+          type: string
+          description: Дата обновления
+          format: date-time
+      required:
+        - id
+        - name
+        - address
+        - phone
+        - active
+        - created_at
+        - updated_at
+    CafeCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Название кафе
+        address:
+          type: string
+          description: Адрес кафе
+        phone:
+          type: string
+          description: Телефон кафе
+        description:
+          type: string
+          description: Описание кафе
+        photo:
+          type: string
+          description: Фото кафе в формате base64
+          format: base64
+        managers:
+          type: array
+          items:
+            type: integer
+            description: ID менеджера
+      required:
+        - id
+        - name
+        - address
+        - phone
+    CafeUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Название кафе
+        address:
+          type: string
+          description: Адрес кафе
+        phone:
+          type: string
+          description: Телефон кафе
+        description:
+          type: string
+          description: Описание кафе
+        photo:
+          type: string
+          description: Фото кафе в формате base64
+          format: base64
+        managers:
+          type: array
+          items:
+            type: integer
+            description: ID менеджера
+        active:
+          type: boolean
+          description: Объект активен?
+    CafeShort:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID записи
+        name:
+          type: string
+          description: Название кафе
+        address:
+          type: string
+          description: Адрес кафе
+        phone:
+          type: string
+          description: Телефон кафе
+        description:
+          type: string
+          description: Описание кафе
+        photo:
+          type: string
+          description: Фото кафе в формате base64
+          format: base64
+        managers:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserShort"
+        active:
+          type: boolean
+          description: Объект активен?
+      required:
+        - id
+        - name
+        - address
+        - phone
+        - active
+
+    Table:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID записи
+        cafe:
+          type: object
+          description: Кафе
+          $ref: "#/components/schemas/CafeShort"
+        seats_number:
+          type: integer
+          description: Количество мест
+        description:
+          type: string
+          description: Описание столика
+        active:
+          type: boolean
+          description: Объект активен?
+        created_at:
+          type: string
+          description: Дата создания
+          format: date-time
+        updated_at:
+          type: string
+          description: Дата обновления
+          format: date-time
+      required:
+        - id
+        - cafe
+        - seats_number
+        - active
+        - created_at
+        - updated_at
+    TableCreate:
+      type: object
+      properties:
+        seats_number:
+          type: integer
+          description: Количество мест
+        description:
+          type: string
+          description: Описание столика
+      required:
+        - seats_number
+    TableUpdate:
+      type: object
+      properties:
+        seats_number:
+          type: integer
+          description: Количество мест
+        description:
+          type: string
+          description: Описание столика
+        active:
+          type: boolean
+          description: Объект активен?
+    TableShort:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID записи
+        cafe:
+          type: object
+          description: Кафе
+          $ref: "#/components/schemas/CafeShort"
+        seats_number:
+          type: integer
+          description: Количество мест
+        description:
+          type: string
+          description: Описание столика
+        active:
+          type: boolean
+          description: Объект активен?
+      required:
+        - id
+        - cafe
+        - seats_number
+        - active
+
+    TimeSlot:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID записи
+        cafe:
+          type: object
+          description: Кафе
+          $ref: "#/components/schemas/CafeShort"
+        start_time:
+          type: string
+          description: Время начала
+          format: time
+        end_time:
+          type: string
+          description: Время окончания
+          format: time
+        description:
+          type: string
+          description: Описание столика
+        active:
+          type: boolean
+          description: Объект активен?
+        created_at:
+          type: string
+          description: Дата создания
+          format: date-time
+        updated_at:
+          type: string
+          description: Дата обновления
+          format: date-time
+      required:
+        - id
+        - cafe
+        - start_time
+        - end_time
+        - active
+        - created_at
+        - updated_at
+    TimeSlotCreate:
+      type: object
+      properties:
+        cafe_id:
+          type: integer
+          description: ID кафе
+        start_time:
+          type: string
+          description: Время начала
+          format: time
+        end_time:
+          type: string
+          description: Время окончания
+          format: time
+        description:
+          type: string
+          description: Описание столика
+        active:
+          type: boolean
+          description: Объект активен?
+      required:
+        - cafe_id
+        - start_time
+        - end_time
+        - active
+    TimeSlotUpdate:
+      type: object
+      properties:
+        cafe_id:
+          type: integer
+          description: ID кафе
+        start_time:
+          type: string
+          description: Время начала
+          format: time
+        end_time:
+          type: string
+          description: Время окончания
+          format: time
+        description:
+          type: string
+          description: Описание столика
+        active:
+          type: boolean
+          description: Объект активен?
+    TimeSlotShort:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID записи
+        cafe:
+          type: object
+          description: Кафе
+          $ref: "#/components/schemas/CafeShort"
+        start_time:
+          type: string
+          description: Время начала
+          format: time
+        end_time:
+          type: string
+          description: Время окончания
+          format: time
+        description:
+          type: string
+          description: Описание столика
+        active:
+          type: boolean
+          description: Объект активен?
+      required:
+        - id
+        - cafe
+        - start_time
+        - end_time
+        - active
+
+    Action:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID записи
+        cafe:
+          type: object
+          description: Кафе
+          $ref: "#/components/schemas/CafeShort"
+        description:
+          type: string
+          description: Описание акции
+        active:
+          type: boolean
+          description: Объект активен?
+        created_at:
+          type: string
+          description: Дата создания
+          format: date-time
+        updated_at:
+          type: string
+          description: Дата обновления
+          format: date-time
+      required:
+        - id
+        - cafe
+        - description
+        - active
+        - created_at
+        - updated_at
+    ActionCreate:
+      type: object
+      properties:
+        cafe:
+          type: integer
+          description: ID Кафе
+        description:
+          type: string
+          description: Описание акции
+      required:
+        - cafe
+        - description
+    ActionUpdate:
+      type: object
+      properties:
+        cafe:
+          type: integer
+          description: ID Кафе
+        description:
+          type: string
+          description: Описание акции
+        active:
+          type: boolean
+          description: Объект активен?
+
+    Dish:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID записи
+        cafe:
+          type: object
+          description: Кафе
+          $ref: "#/components/schemas/CafeShort"
+        name:
+          type: string
+          description: Название блюда
+        description:
+          type: string
+          description: Описание акции
+        price:
+          type: integer
+          description: Цена
+        photo:
+          type: string
+          format: base64
+          description: Фото блюда в формате base64
+        active:
+          type: boolean
+          description: Объект активен?
+        created_at:
+          type: string
+          description: Дата создания
+          format: date-time
+        updated_at:
+          type: string
+          description: Дата обновления
+          format: date-time
+      required:
+        - id
+        - cafe
+        - name
+        - description
+        - active
+        - created_at
+        - updated_at
+    DishCreate:
+      type: object
+      properties:
+        cafe:
+          type: integer
+          description: ID Кафе
+        name:
+          type: string
+          description: Название блюда
+        description:
+          type: string
+          description: Описание акции
+        price:
+          type: integer
+          description: Цена
+        photo:
+          type: string
+          format: base64
+          description: Фото блюда в формате base64
+      required:
+        - cafe
+        - name
+        - description
+        - price
+    DishUpdate:
+      type: object
+      properties:
+        cafe:
+          type: integer
+          description: ID Кафе
+        name:
+          type: string
+          description: Название блюда
+        description:
+          type: string
+          description: Описание акции
+        price:
+          type: integer
+          description: Цена
+        photo:
+          type: string
+          format: base64
+          description: Фото блюда в формате base64
+        active:
+          type: boolean
+          description: Объект активен?
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID записи
+        user:
+          type: object
+          description: Пользователь
+          $ref: "#/components/schemas/UserShort"
+        cafe:
+          type: object
+          description: Кафе
+          $ref: "#/components/schemas/CafeShort"
+        tables:
+          type: array
+          description: Забронированные столы
+          items:
+            $ref: "#/components/schemas/TableShort"
+        slots:
+          type: array
+          description: Время бронирования
+          items:
+            $ref: "#/components/schemas/TimeSlotShort"
+        menu:
+          type: array
+          description: Блюда для предварительного заказа
+          items:
+            $ref: "#/components/schemas/Dish"
+        guests_number:
+          type: integer
+          description: Количество гостей
+        status:
+          description: Статус бронирования
+          type: integer
+          oneOf:
+            - title: booking
+              const: 0
+              description: Забронировано
+            - title: canceled
+              const: 1
+              description: Отменено
+            - title: active
+              const: 2
+              description: Клиент подошел
+        note:
+          type: string
+          description: Комментарий к бронированию
+        active:
+          type: boolean
+          description: Объект активен?
+        created_at:
+          type: string
+          description: Дата создания
+          format: date-time
+        updated_at:
+          type: string
+          description: Дата обновления
+          format: date-time
+      required:
+        - id
+        - user
+        - cafe
+        - tables
+        - slots
+        - status
+        - guests_number
+        - active
+        - created_at
+        - updated_at
+    BookingCreate:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          description: ID пользователя
+        cafe_id:
+          type: integer
+          description: ID кафе
+        tables:
+          type: array
+          description: Бронируемые столы
+          items:
+            type: integer
+            description: ID cтола
+        slots:
+          type: array
+          description: Слоты бронирования
+          items:
+            type: integer
+            description: ID слота бронирования
+        menu:
+          type: array
+          description: Блюда для предварительного заказа
+          items:
+            type: integer
+            description: ID блюда
+        guests_number:
+          type: integer
+          description: Количество гостей
+        note:
+          type: string
+          description: Комментарий к бронированию
+      required:
+        - user_id
+        - cafe_id
+        - tables
+        - slots
+        - guests_number
+    BookingUpdate:
+      type: object
+      properties:
+        tables:
+          type: array
+          description: Бронируемые столы
+          items:
+            type: integer
+            description: ID cтола
+        slots:
+          type: array
+          description: Слоты бронирования
+          items:
+            type: integer
+            description: ID слота бронирования
+        menu:
+          type: array
+          description: Блюда для предварительного заказа
+          items:
+            type: integer
+            description: ID блюда
+        status:
+          description: Статус бронирования
+          type: integer
+          oneOf:
+            - title: booking
+              const: 0
+              description: Забронировано
+            - title: canceled
+              const: 1
+              description: Отменено
+            - title: active
+              const: 2
+              description: Клиент подошел
+        guests_number:
+          type: integer
+          description: Количество гостей
+        note:
+          type: string
+          description: Комментарий к бронированию
+        active:
+          type: boolean
+          description: Объект активен?
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
