@@ -98,3 +98,4 @@ async def get_user_by_id(
 ):
     db_user = await user_crud.get(user_id, session)
     return db_user
+
