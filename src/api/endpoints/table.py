@@ -44,7 +44,7 @@ async def create_table(
     current_user: User = Depends(current_admin_or_manager) #проверь 
 ) -> Table:
     await cafe_exists(cafe_id, session)
-    table = await table_crud.create_by_cafe(session, cafe_id, table_in)
+    table = await table_crud.create(session, cafe_id, table_in)
     await session.commit()
     return table
 

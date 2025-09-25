@@ -1,20 +1,27 @@
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
 from src.models.table import TableModel
 from src.schemas.table import TableCreate, TableUpdate
 
 
 class TableCRUD:
+
     async def get_by_id_and_cafe(
         self,
         session: AsyncSession,
         table_id: int,
         cafe_id: int
-    ) -> Optional[TableModel]:
-        table = select(TableModel).where(
-            TableModel.id == table_id,
-            TableModel.cafe_id == cafe_id
+    ) -> TableModel:
+        table = (
+            select(TableModel)
+            .options(selectinload(TableModel.cafe))
+            .where(
+                TableModel.id == table_id,
+                TableModel.cafe_id == cafe_id
+            )
         )
         result = await session.execute(table)
         return result.scalars().first()
@@ -25,13 +32,17 @@ class TableCRUD:
         cafe_id: int,
         include_inactive: bool = False
     ) -> List[TableModel]:
-        tables = select(TableModel).where(TableModel.cafe_id == cafe_id)
+        tables = select(
+            TableModel
+        ).options(selectinload(TableModel.cafe)).where(
+            TableModel.cafe_id == cafe_id
+        )
         if not include_inactive:
             tables = tables.where(TableModel.active.is_(True))
         result = await session.execute(tables)
         return result.scalars().all()
 
-    async def create_by_cafe(
+    async def create(
         self,
         session: AsyncSession,
         cafe_id: int,
@@ -40,10 +51,14 @@ class TableCRUD:
         db_obj = TableModel(**obj_in.model_dump(), cafe_id=cafe_id)
         session.add(db_obj)
         await session.flush()
-        await session.refresh(db_obj)
-        return db_obj
+        result = await session.execute(
+            select(TableModel)
+            .options(selectinload(TableModel.cafe))
+            .where(TableModel.id == db_obj.id)
+        )
+        return result.scalar_one()
 
-    async def update_by_cafe(
+    async def update(
         self,
         session: AsyncSession,
         db_obj: TableModel,
@@ -54,8 +69,12 @@ class TableCRUD:
             setattr(db_obj, field, value)
         session.add(db_obj)
         await session.flush()
-        await session.refresh(db_obj)
-        return db_obj
+        result = await session.execute(
+            select(TableModel)
+            .options(selectinload(TableModel.cafe))
+            .where(TableModel.id == db_obj.id)
+        )
+        return result.scalar_one()
 
 
 table_crud = TableCRUD()
