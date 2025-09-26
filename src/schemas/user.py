@@ -54,4 +54,3 @@ class UserUpdate(BaseModel):
     tg_id: Optional[str] = None
     password: Optional[str] = None
     active: Optional[bool] = None
-      
