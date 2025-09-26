@@ -44,7 +44,4 @@ async def manager_or_admin_access(
     ))
     result = await session.execute(query)
     is_manager = result.scalar()
-    print(is_manager)
-    print(current_user.id)
-    print(current_user.is_superuser)
     return is_manager or current_user.is_superuser
