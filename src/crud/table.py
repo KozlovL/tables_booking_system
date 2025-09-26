@@ -9,6 +9,7 @@ from src.schemas.table import TableCreate, TableUpdate
 
 
 class TableCRUD:
+
     def _build_query(
         self,
         cafe_id: int,
@@ -17,13 +18,12 @@ class TableCRUD:
     ):
         """Базовый запрос для получения столов в кафе"""
         query = select(TableModel).options(
-            selectinload(TableModel.cafe)).where(
+            selectinload(TableModel.cafe)
+            ).where(
                 TableModel.cafe_id == cafe_id
             )
-        print(query)
         if table_id is not None:
             query = query.where(TableModel.id == table_id)
-        print(table_id)
         if not include_inactive:
             query = query.join(Cafe, TableModel.cafe_id == Cafe.id).where(
                 TableModel.active.is_(True),
