@@ -30,15 +30,15 @@ class TableCRUD:
         self,
         session: AsyncSession,
         cafe_id: int,
-        include_inactive: bool = False
+#        include_inactive: bool = False
     ) -> List[TableModel]:
         tables = select(
             TableModel
         ).options(selectinload(TableModel.cafe)).where(
             TableModel.cafe_id == cafe_id
         )
-        if not include_inactive:
-            tables = tables.where(TableModel.active.is_(True))
+        # if not include_inactive:
+        #     tables = tables.where(TableModel.active.is_(True))
         result = await session.execute(tables)
         return result.scalars().all()
 

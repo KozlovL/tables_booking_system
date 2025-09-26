@@ -12,8 +12,10 @@ class TableCreate(TableBase):
     pass
 
 
-class TableUpdate(TableBase):
+class TableUpdate(BaseModel):
+
     seats_number: int | None = Field(None, description='Количество мест')
+    description: str | None = Field(None, description='Описание столика')
     active: bool | None = Field(None, description='Объект активен?')
 
 

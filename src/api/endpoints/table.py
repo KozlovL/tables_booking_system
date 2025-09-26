@@ -1,15 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.core.db import get_db
+
+from src.core.db import get_async_session
+from src.core.auth import get_current_user, require_admin
 from src.crud.table import table_crud
 from src.schemas.table import Table, TableCreate, TableUpdate
-# from src.dependencies import (
-#     require_admin_or_manager,
-#     require_user_or_manager_admin,
-#     get_current_active_user
-# )
 from src.models.user import User
 from src.models.table import TableModel
+from src.models.cafe import Cafe
 
 router = APIRouter(prefix='/cafe/{cafe_id}/tables', tags=['Столы'])
 
@@ -21,12 +20,13 @@ router = APIRouter(prefix='/cafe/{cafe_id}/tables', tags=['Столы'])
 )
 async def get_tables_in_cafe(
     cafe_id: int,
-    session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(active_user)   #проверь 
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
 ) -> list[Table]:
-    include_inactive = current_user.role in ['admin', ' manager']
+#    include_inactive = current_user.role in ['admin', ' manager']
+    await cafe_exists(cafe_id, session)
     tables = await table_crud.get_multi_by_cafe(
-        session, cafe_id, include_inactive
+        session, cafe_id  # include_inactive
     )
     return tables
 
@@ -40,8 +40,8 @@ async def get_tables_in_cafe(
 async def create_table(
     cafe_id: int,
     table_in: TableCreate,
-    session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(current_admin_or_manager) #проверь 
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(require_admin)
 ) -> Table:
     await cafe_exists(cafe_id, session)
     table = await table_crud.create(session, cafe_id, table_in)
@@ -57,8 +57,8 @@ async def create_table(
 async def get_table_by_id(
     cafe_id: int,
     table_id: int,
-    session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(active_user) #проверь 
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
 ) -> Table:
     table = await get_table_or_404(session, table_id, cafe_id)
     check_table_visibility_for_user(table, current_user)
@@ -74,8 +74,8 @@ async def update_table(
     cafe_id: int,
     table_id: int,
     table_in: TableUpdate,
-    session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(current_admin_or_manager) #проверь 
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(require_admin)
 ):
     table = await get_table_or_404(session, table_id, cafe_id)
 
@@ -105,7 +105,7 @@ def check_table_visibility_for_user(
 
 async def cafe_exists(cafe_id: int, session: AsyncSession) -> None:
     cafe = await session.execute(
-        select(CafeModel.id).where(CafeModel.id == cafe_id) #проверь 
+        select(Cafe.id).where(Cafe.id == cafe_id)
     )
     if cafe.scalar() is None:
         raise HTTPException(status_code=404, detail='Кафе не найдено')
