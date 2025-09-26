@@ -6,8 +6,8 @@ from src.core.auth import get_current_user, require_admin
 from src.crud.table import table_crud
 from src.api.validators import (
     get_table_or_404,
-    check_table_visibility_for_user,
-    cafe_exists
+    cafe_exists,
+    manager_or_admin_access
 )
 from src.schemas.table import Table, TableCreate, TableUpdate
 from src.models.user import User
@@ -25,11 +25,13 @@ async def get_tables_in_cafe(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ) -> list[Table]:
-#    include_inactive = current_user.role in ['admin', ' manager']
-    await cafe_exists(cafe_id, session)
-    tables = await table_crud.get_multi_by_cafe(
-        session, cafe_id  # include_inactive
+    include_inactive = await manager_or_admin_access(
+        cafe_id, current_user, session
     )
+    tables = await table_crud.get_multi_by_cafe(
+        session, cafe_id, include_inactive
+    )
+    await cafe_exists(cafe_id, session)
     return tables
 
 
@@ -62,8 +64,10 @@ async def get_table_by_id(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ) -> Table:
-    table = await get_table_or_404(session, table_id, cafe_id)
-    check_table_visibility_for_user(table, current_user)
+
+    table = await get_table_or_404(
+        session, table_id, cafe_id, current_user
+    )
     return table
 
 

@@ -1,30 +1,28 @@
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, exists
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.crud.table import table_crud
 from src.models.table import TableModel
-from src.models.cafe import Cafe
+from src.models.cafe import Cafe, cafe_managers_table
 from src.models.user import User
 
 
 async def get_table_or_404(
     session: AsyncSession,
     table_id: int,
-    cafe_id: int
+    cafe_id: int,
+    current_user: User
 ) -> TableModel:
-    table = await table_crud.get_by_id_and_cafe(session, table_id, cafe_id)
+    include_inactive = await manager_or_admin_access(
+        cafe_id, current_user, session
+    )
+    table = await table_crud.get_by_id_and_cafe(
+        session, table_id, cafe_id, include_inactive
+    )
     if not table:
         raise HTTPException(status_code=404, detail='Стол или кафе не найдены')
     return table
-
-
-def check_table_visibility_for_user(
-    table: TableModel,
-    current_user: User
-) -> None:
-    if current_user.is_superuser is False and not table.active:  # Нужно будет доделать логику для менеджеров
-        raise HTTPException(status_code=404, detail='Стол или кафе не найдены')
 
 
 async def cafe_exists(cafe_id: int, session: AsyncSession) -> None:
@@ -33,3 +31,20 @@ async def cafe_exists(cafe_id: int, session: AsyncSession) -> None:
     )
     if cafe.scalar() is None:
         raise HTTPException(status_code=404, detail='Кафе не найдено')
+
+
+async def manager_or_admin_access(
+    cafe_id,
+    current_user: User,
+    session: AsyncSession
+) -> bool:
+    query = select(exists().where(
+        cafe_managers_table.c.user_id == current_user.id,
+        cafe_managers_table.c.cafe_id == cafe_id
+    ))
+    result = await session.execute(query)
+    is_manager = result.scalar()
+    print(is_manager)
+    print(current_user.id)
+    print(current_user.is_superuser)
+    return is_manager or current_user.is_superuser

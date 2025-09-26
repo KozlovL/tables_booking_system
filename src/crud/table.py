@@ -1,45 +1,63 @@
-from typing import List
+from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from src.models.cafe import Cafe
 from src.models.table import TableModel
 from src.schemas.table import TableCreate, TableUpdate
 
 
 class TableCRUD:
+    def _build_query(
+        self,
+        cafe_id: int,
+        table_id: Optional[int] = None,
+        include_inactive: bool = False
+    ):
+        """Базовый запрос для получения столов в кафе"""
+        query = select(TableModel).options(
+            selectinload(TableModel.cafe)).where(
+                TableModel.cafe_id == cafe_id
+            )
+        print(query)
+        if table_id is not None:
+            query = query.where(TableModel.id == table_id)
+        print(table_id)
+        if not include_inactive:
+            query = query.join(Cafe, TableModel.cafe_id == Cafe.id).where(
+                TableModel.active.is_(True),
+                Cafe.active.is_(True)
+            )
+
+        return query
 
     async def get_by_id_and_cafe(
         self,
         session: AsyncSession,
         table_id: int,
-        cafe_id: int
+        cafe_id: int,
+        include_inactive: bool = False
     ) -> TableModel:
-        table = (
-            select(TableModel)
-            .options(selectinload(TableModel.cafe))
-            .where(
-                TableModel.id == table_id,
-                TableModel.cafe_id == cafe_id
-            )
+        query = self._build_query(
+            cafe_id=cafe_id,
+            table_id=table_id,
+            include_inactive=include_inactive
         )
-        result = await session.execute(table)
+        result = await session.execute(query)
         return result.scalars().first()
 
     async def get_multi_by_cafe(
         self,
         session: AsyncSession,
         cafe_id: int,
-#        include_inactive: bool = False
+        include_inactive: bool = False
     ) -> List[TableModel]:
-        tables = select(
-            TableModel
-        ).options(selectinload(TableModel.cafe)).where(
-            TableModel.cafe_id == cafe_id
+        query = self._build_query(
+            cafe_id=cafe_id,
+            include_inactive=include_inactive
         )
-        # if not include_inactive:
-        #     tables = tables.where(TableModel.active.is_(True))
-        result = await session.execute(tables)
+        result = await session.execute(query)
         return result.scalars().all()
 
     async def create(
