@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     app_description: str = 'Проект «Бронирование мест в кафе»'
     database_url: str
     secret: str
-    jwt_algorithm: str = "HS256"
+    jwt_algorithm: str
     access_token_expire_min: int = 120
     bcrypt_rounds: int = 12
     first_superuser_username: Optional[str] = None

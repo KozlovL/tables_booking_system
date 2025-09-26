@@ -10,10 +10,7 @@ class CRUDBase:
         self.model = model
 
     async def get(self, obj_id: int, session: AsyncSession):
-        res = await session.execute(
-            select(self.model).where(self.model.id == obj_id),
-        )
-        return res.scalar_one_or_none()
+        return await session.get(self.model, obj_id)
 
     async def get_multi(self, session: AsyncSession):
         stmt = select(self.model)
@@ -60,10 +57,5 @@ class CRUDBase:
                 setattr(db_obj, field, value)
 
         # для M2M/отношений обновление делается снаружи (не тут)
-        await session.flush()
-        return db_obj
-
-    async def remove(self, db_obj, session: AsyncSession):
-        session.delete(db_obj)     # без await
         await session.flush()
         return db_obj
