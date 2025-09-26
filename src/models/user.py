@@ -47,5 +47,5 @@ class User(Base, TimestampMixin, ActiveMixin):
         "Cafe",
         secondary=cafe_managers_table,
         back_populates="managers",
-        lazy="selectin",# ускорит выборку менеджеров вместе с кафе
+        lazy="selectin",  # ускорит выборку менеджеров вместе с кафе
     )
