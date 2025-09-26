@@ -1,14 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.db import get_async_session
 from src.core.auth import get_current_user, require_admin
 from src.crud.table import table_crud
+from src.api.validators import (
+    get_table_or_404,
+    check_table_visibility_for_user,
+    cafe_exists
+)
 from src.schemas.table import Table, TableCreate, TableUpdate
 from src.models.user import User
-from src.models.table import TableModel
-from src.models.cafe import Cafe
 
 router = APIRouter(prefix='/cafe/{cafe_id}/tables', tags=['Столы'])
 
@@ -82,30 +84,3 @@ async def update_table(
     updated_table = await table_crud.update(session, table, table_in)
     await session.commit()
     return updated_table
-
-
-async def get_table_or_404(
-    session: AsyncSession,
-    table_id: int,
-    cafe_id: int
-) -> TableModel:
-    table = await table_crud.get_by_id_and_cafe(session, table_id, cafe_id)
-    if not table:
-        raise HTTPException(status_code=404, detail='Стол или кафе не найдены')
-    return table
-
-
-def check_table_visibility_for_user(
-    table: TableModel,
-    current_user: User
-) -> None:
-    if current_user.role == 'user' and not table.active:
-        raise HTTPException(status_code=404, detail='Стол или кафе не найдены')
-
-
-async def cafe_exists(cafe_id: int, session: AsyncSession) -> None:
-    cafe = await session.execute(
-        select(Cafe.id).where(Cafe.id == cafe_id)
-    )
-    if cafe.scalar() is None:
-        raise HTTPException(status_code=404, detail='Кафе не найдено')

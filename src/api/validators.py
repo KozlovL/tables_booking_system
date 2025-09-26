@@ -23,7 +23,7 @@ def check_table_visibility_for_user(
     table: TableModel,
     current_user: User
 ) -> None:
-    if current_user.role == 'user' and not table.active:
+    if current_user.is_superuser is False and not table.active:  # Нужно будет доделать логику для менеджеров
         raise HTTPException(status_code=404, detail='Стол или кафе не найдены')
 
 
