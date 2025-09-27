@@ -1,16 +1,20 @@
-name: insert_project_name
+name: cafe_service
 
 services:
   db:
     image: postgres:17-alpine
     env_file:
-      - ./.env
+      - ../.env_prod
     environment:
+      POSTGRES_USER: ${POSTGRES_USER:-prod_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-prod_password}
+      POSTGRES_DB: ${POSTGRES_DB:-prod_db}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     volumes:
       - "./pgdata:/var/lib/postgresql/data/pgdata"
+      - "./postgres_init:/docker-entrypoint-initdb.d"
     command: >
       postgres -c max_connections=1000
                -c shared_buffers=256MB
@@ -20,8 +24,41 @@ services:
                -c wal_buffers=16MB
                -c default_statistics_target=100
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB" ]
+      test: [ "CMD-SHELL", "pg_isready"]
       interval: 30s
       timeout: 10s
       retries: 5
     restart: unless-stopped
+
+    # Сервис для вашего FastAPI приложения
+  web:
+      container_name: booking_tables
+      # Собираем образ, используя Dockerfile из текущей папки (infra)
+      # Контекст сборки - родительская папка (..), чтобы Docker мог видеть папки `src` и `alembic`
+      build:
+        context: ..
+        dockerfile: infra/Dockerfile
+      # Загружаем переменные (DATABASE_URL, SECRET_KEY) из файла .env_prod
+      env_file:
+        - ../.env_prod
+      ports:
+        - "8000:8000"
+      # Зависит от сервиса `db`. Docker Compose запустит `db` перед `web`
+      depends_on:
+        db:
+          condition: service_healthy
+      # Команда, которая будет выполнена при старте контейнера
+      # 1. Ждем, пока PostgreSQL станет доступен
+      # 2. Применяем миграции Alembic
+      # 3. Запускаем Uvicorn сервер
+      command: >
+        sh -c "
+        echo 'PostgreSQL is healthy, applying migrations...';
+        alembic upgrade head &&
+        echo 'Starting server...';
+        uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+        "
+
+
+volumes:
+    postgres_data:
