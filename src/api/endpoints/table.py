@@ -61,7 +61,6 @@ async def create_table(
     """
     await cafe_exists(cafe_id, session)
     table = await table_crud.create(session, cafe_id, table_in)
-    await session.commit()
     return table
 
 
@@ -101,7 +100,7 @@ async def update_table(
     table_in: TableUpdate,
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(require_manager_or_admin)
-):
+) -> Table:
     """
     Изменяет стол в указаном кафе
 
@@ -113,5 +112,4 @@ async def update_table(
     )
 
     updated_table = await table_crud.update(session, table, table_in)
-    await session.commit()
     return updated_table

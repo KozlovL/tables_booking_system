@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.crud.table import table_crud
 from src.models.table import TableModel
-from src.models.cafe import Cafe, cafe_managers_table
+from src.models.cafe import Cafe
 
 
 async def get_table_or_404(

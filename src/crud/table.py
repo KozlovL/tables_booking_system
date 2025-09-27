@@ -74,7 +74,10 @@ class TableCRUD:
             .options(selectinload(TableModel.cafe))
             .where(TableModel.id == db_obj.id)
         )
-        return result.scalar_one()
+        updated_obj = result.scalar_one()
+        await session.commit()
+        await session.refresh(updated_obj)
+        return updated_obj
 
     async def update(
         self,
@@ -92,7 +95,10 @@ class TableCRUD:
             .options(selectinload(TableModel.cafe))
             .where(TableModel.id == db_obj.id)
         )
-        return result.scalar_one()
+        updated_obj = result.scalar_one()
+        await session.commit()
+        await session.refresh(updated_obj)
+        return updated_obj
 
 
 table_crud = TableCRUD()
