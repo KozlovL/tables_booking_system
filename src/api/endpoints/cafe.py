@@ -17,13 +17,18 @@ router = APIRouter(prefix="/cafes", tags=["Кафе"])
 @router.post("",
              response_model=CafeRead,
              status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(require_admin)]
              )
 async def create_cafe(
     payload: CafeCreate,
     session: AsyncSession = Depends(get_async_session),
 ):
     photo_url = payload.photo if payload.photo else None
-    cafe = await cafe_crud.create_with_managers(payload, session, photo_url=photo_url)
+    cafe = await cafe_crud.create_with_managers(
+        payload,
+        session,
+        photo_url=photo_url
+    )
     return cafe
 
 
@@ -56,7 +61,7 @@ async def list_cafes(
 @router.get(
     '/{cafe_id}',
     response_model=CafeRead,
-    status_code=status.HTTP_200_OK,
+    status_code=status.HTTP_200_OK
 )
 async def get_cafe(
     cafe_id: int,
@@ -81,7 +86,9 @@ async def get_cafe(
 
 @router.patch("/{cafe_id}",
               response_model=CafeRead,
-              status_code=status.HTTP_200_OK)
+              status_code=status.HTTP_200_OK,
+              dependencies=[Depends(require_admin)]
+              )
 async def update_cafe(
         cafe_id: int,
         payload: CafeUpdate,
@@ -94,8 +101,6 @@ async def update_cafe(
 
         # 2. Обработка фото (base64 → путь)
     update_data = payload.model_dump(exclude_unset=True)
-    print(update_data)
-
     photo_url = None
     if 'photo' in update_data and update_data['photo']:
             photo_url = update_data['photo']
