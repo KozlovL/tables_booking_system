@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 from src.schemas.cafe import CafeShort
 
@@ -19,9 +19,7 @@ class DishCreate(BaseModel):
     photo: Optional[str]
 
     # Выбрасываем ошибку при передаче лишних полей
-    model_config = {
-        'extra': 'forbid'
-    }
+    model_config = ConfigDict(extra='forbid')
 
 
 class DishDB(DishCreate):
@@ -33,8 +31,7 @@ class DishDB(DishCreate):
     updated_at: datetime
 
     # Чтобы схема могла принимать ORM-объекты
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DishUpdate(DishCreate):
