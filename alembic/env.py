@@ -5,25 +5,24 @@ import os
 from logging.config import fileConfig
 from typing import Any
 
-from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
 # Импортируем базовый класс Base.
 from src.core.base import Base
+from src.core.config import settings
+import src.models  # noqa: F401
 
-from src.models import cafe
 
 
-load_dotenv('.env')
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-config.set_main_option('sqlalchemy.url', os.environ['DATABASE_URL'])
+config.set_main_option('sqlalchemy.url', settings.database_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -36,11 +35,12 @@ if config.config_file_name is not None:
 # Присвоим переменной target_metadata объект класса MetaData из Base.
 target_metadata = Base.metadata
 
-print(target_metadata.tables)
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
 
 
 def run_migrations_offline() -> None:
@@ -56,14 +56,13 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    dialect = url.split(':')[0]
 
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=(dialect == "sqlite")
+        render_as_batch=url.startswith("sqlite"),
     )
 
     with context.begin_transaction():
@@ -75,7 +74,8 @@ def do_run_migrations(connection: Any) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        render_as_batch=True,
+        compare_type=True,
+        render_as_batch=connection.dialect.name == "sqlite",
     )
 
     with context.begin_transaction():
@@ -89,14 +89,12 @@ async def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = AsyncEngine(
-        engine_from_config(
-            config.get_section(config.config_ini_section),
-            prefix="sqlalchemy.",
-            poolclass=pool.NullPool,
-            future=True,
-        ),
+    connectable = async_engine_from_config(
+        config.get_section(config.config_ini_section),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
     )
+
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
