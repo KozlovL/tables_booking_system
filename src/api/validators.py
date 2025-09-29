@@ -1,8 +1,12 @@
+from http import HTTPStatus
+
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.crud.dish import dish_crud
 from src.crud.table import table_crud
+from src.models import Dish
 from src.models.table import TableModel
 from src.models.cafe import Cafe
 
@@ -30,3 +34,35 @@ async def cafe_exists(cafe_id: int, session: AsyncSession) -> None:
     )
     if cafe.scalar() is None:
         raise HTTPException(status_code=404, detail='Кафе не найдено')
+
+
+async def check_dish_name_duplicate(
+        dish_name: str,
+        session: AsyncSession,
+) -> None:
+    """Проверяет дублирование названия блюда в бд."""
+    dish_id = await dish_crud.get_by_field(
+        session,
+        name=dish_name,
+    )
+    if dish_id is not None:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail='Блюдо с таким названием уже существует!',
+        )
+
+
+async def get_dish_or_404(
+        dish_id: int,
+        session: AsyncSession,
+) -> Dish:
+    dish = await dish_crud.get_by_field(
+        session,
+        id=dish_id
+    )
+    if dish is None:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail='Блюдо не найдено'
+        )
+    return dish

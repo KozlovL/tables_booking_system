@@ -1,8 +1,11 @@
 # app/crud/base.py
-from typing import Iterable
+from typing import Iterable, Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload, undefer
+
+from src.models import Cafe
 
 
 class CRUDBase:
@@ -59,3 +62,37 @@ class CRUDBase:
         # для M2M/отношений обновление делается снаружи (не тут)
         await session.flush()
         return db_obj
+
+    async def get_by_field(
+            self,
+            session: AsyncSession,
+            many: bool = False,
+            **kwargs: Any
+    ):
+        """
+        Функция получения одного или нескольких объектов по полям.
+
+        Примеры запроса:
+
+        objects_by_name = object_crud.get_by_field(
+            session=session,
+            many=True,
+            name='some_name'
+        )
+
+        single_object_by_slug = object_crud.get_by_slug(
+            session=session,
+            slug='some_name'
+        """
+        stmt = select(self.model).filter_by(**kwargs).options(
+            undefer(self.model.updated_at),
+            undefer(self.model.created_at),
+        )
+        # Если модель не кафе, то подгружаем менеджеров через cafe
+        if self.model != Cafe:
+            stmt = stmt.options(
+                selectinload(self.model.cafe).selectinload(Cafe.managers)
+            )
+        result = await session.execute(stmt)
+        scalars = result.scalars()
+        return scalars.all() if many else scalars.first()

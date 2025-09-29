@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_include_inactive, require_manager_or_admin
+from src.api.deps.access import check_admin_or_manager
 from src.core.db import get_async_session
 from src.core.auth import get_current_user
 from src.crud.table import table_crud
@@ -51,14 +52,19 @@ async def create_table(
     cafe_id: int,
     table_in: TableCreate,
     session: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(require_manager_or_admin)
-) -> Table:
+    current_user: User = Depends(get_current_user)
+):
     """
     Создает стол в указаном кафе.
 
     Права доступа:
     - Менеджер кафе или администратор.
     """
+    await check_admin_or_manager(
+        session=session,
+        cafe_id=cafe_id,
+        current_user=current_user,
+    )
     await cafe_exists(cafe_id, session)
     table = await table_crud.create(session, cafe_id, table_in)
     return table
@@ -99,7 +105,7 @@ async def update_table(
     table_id: int,
     table_in: TableUpdate,
     session: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(require_manager_or_admin)
+    current_user: User = Depends(get_current_user)
 ) -> Table:
     """
     Изменяет стол в указаном кафе
@@ -107,6 +113,11 @@ async def update_table(
     Права доступа:
     - Менеджер кафе или администратор.
     """
+    await check_admin_or_manager(
+        session=session,
+        cafe_id=cafe_id,
+        current_user=current_user,
+    )
     table = await get_table_or_404(
         session, table_id, cafe_id, include_inactive=True
     )

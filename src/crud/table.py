@@ -68,16 +68,14 @@ class TableCRUD:
     ) -> TableModel:
         db_obj = TableModel(**obj_in.model_dump(), cafe_id=cafe_id)
         session.add(db_obj)
-        await session.flush()
+        await session.commit()
+        await session.refresh(db_obj)
         result = await session.execute(
             select(TableModel)
-            .options(selectinload(TableModel.cafe))
+            .options(selectinload(TableModel.cafe).selectinload(Cafe.managers))
             .where(TableModel.id == db_obj.id)
         )
-        updated_obj = result.scalar_one()
-        await session.commit()
-        await session.refresh(updated_obj)
-        return updated_obj
+        return result.scalar_one()
 
     async def update(
         self,
@@ -89,16 +87,14 @@ class TableCRUD:
         for field, value in update_data.items():
             setattr(db_obj, field, value)
         session.add(db_obj)
-        await session.flush()
+        await session.commit()
+        await session.refresh(db_obj)
         result = await session.execute(
             select(TableModel)
-            .options(selectinload(TableModel.cafe))
+            .options(selectinload(TableModel.cafe).selectinload(Cafe.managers))
             .where(TableModel.id == db_obj.id)
         )
-        updated_obj = result.scalar_one()
-        await session.commit()
-        await session.refresh(updated_obj)
-        return updated_obj
+        return result.scalar_one()
 
 
 table_crud = TableCRUD()
