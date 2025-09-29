@@ -1,9 +1,10 @@
 from http import HTTPStatus
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, exists
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.crud.cafe import cafe_crud
 from src.crud.dish import dish_crud
 from src.crud.table import table_crud
 from src.models import Dish
@@ -30,22 +31,27 @@ async def get_table_or_404(
 async def cafe_exists(cafe_id: int, session: AsyncSession) -> None:
     """Функция проверки существования кафе"""
     cafe = await session.execute(
-        select(Cafe.id).where(Cafe.id == cafe_id)
+        select(exists().where(Cafe.id == cafe_id))
     )
     if cafe.scalar() is None:
-        raise HTTPException(status_code=404, detail='Кафе не найдено')
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail='Кафе не найдено'
+        )
 
 
 async def check_dish_name_duplicate(
         dish_name: str,
+        cafe: Cafe,
         session: AsyncSession,
 ) -> None:
-    """Проверяет дублирование названия блюда в бд."""
-    dish_id = await dish_crud.get_by_field(
+    """Проверяет дублирование названия блюда в кафе."""
+    dish = await dish_crud.get_by_field(
         session,
         name=dish_name,
+        cafe=cafe,
     )
-    if dish_id is not None:
+    if dish is not None:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,
             detail='Блюдо с таким названием уже существует!',
@@ -55,10 +61,12 @@ async def check_dish_name_duplicate(
 async def get_dish_or_404(
         dish_id: int,
         session: AsyncSession,
+        extra_uploading: bool = False,
 ) -> Dish:
     dish = await dish_crud.get_by_field(
-        session,
-        id=dish_id
+        session=session,
+        extra_uploading=extra_uploading,
+        id=dish_id,
     )
     if dish is None:
         raise HTTPException(
@@ -66,3 +74,20 @@ async def get_dish_or_404(
             detail='Блюдо не найдено'
         )
     return dish
+
+
+async def get_cafe_or_404(
+        cafe_id: int,
+        session: AsyncSession,
+) -> Cafe:
+    """Функция получения кафе или ошибки 404."""
+    cafe = await cafe_crud.get_by_field(
+        session,
+        id=cafe_id,
+    )
+    if cafe is None:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail='Кафе не найдено'
+        )
+    return cafe

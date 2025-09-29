@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 from fastapi import Depends, Path, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, exists
@@ -6,12 +8,12 @@ from typing import Optional
 from src.core.auth import get_current_user
 from src.core.db import get_async_session
 from src.crud.cafe import cafe_crud
-from src.models import User, cafe_managers_table
+from src.models import User, cafe_managers_table, Cafe
 
 
 async def _is_manager_or_admin(
-    cafe_id: int,
-    user: Optional[User],
+    cafe_id: int | None,
+    user: User,
     session: AsyncSession
 ) -> bool:
     """
@@ -57,42 +59,27 @@ async def require_manager_or_admin(
 
 
 async def is_admin_or_manager(
-        session: AsyncSession,
-        cafe_id: int | None,
+        cafe: Cafe | None,
         current_user: User,
 ) -> bool:
     """Функция проверки пользователя на статус админа или менеджера кафе."""
     # Если пользователь - админ, то возвращаем True
     if current_user.is_superuser:
         return True
-    # Если передали id, то проверяем список менеджеров и ищем там текущего
-    # пользователя
-    if cafe_id is not None:
-        cafe = await cafe_crud.get_by_field(
-                session=session,
-                cafe_id=cafe_id
-        )
-        if current_user in cafe.managers:
-            return True
+    # Если пользователь есть в списке менеджеров кафе
+    if cafe is not None and current_user in cafe.managers:
+        return True
     # Если ничего не нашли возвращаем False
     return False
 
 
 async def check_admin_or_manager(
-        session: AsyncSession,
-        cafe_id: int | None,
+        cafe: Cafe,
         current_user: User,
 ) -> None:
     """Функция валидации статуса пользователя."""
-    cafe = await cafe_crud.get_by_field(
-            session=session,
-            id=cafe_id
-    )
-    if not (
-            current_user.is_superuser
-            or (
-                cafe_id is not None
-                and current_user in cafe.managers
-            )
-    ):
-        raise HTTPException(status_code=401, detail='Необходима авторизация')
+    if not await is_admin_or_manager(cafe=cafe, current_user=current_user):
+        raise HTTPException(
+            status_code=HTTPStatus.UNAUTHORIZED,
+            detail='Необходима авторизация'
+        )

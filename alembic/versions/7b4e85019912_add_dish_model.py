@@ -29,8 +29,7 @@ def upgrade():
     sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('active', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['cafe'], ['cafe.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('name')
+    sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###
 

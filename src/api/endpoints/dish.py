@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.deps.access import is_admin_or_manager, check_admin_or_manager
 from src.api.validators import (
     check_dish_name_duplicate,
-    get_dish_or_404, cafe_exists,
+    get_dish_or_404, get_cafe_or_404,
 )
 from src.core.auth import get_current_user
 from src.core.db import get_async_session
@@ -31,22 +31,25 @@ async def get_all_dishes(
 ):
     # Список фильтров для запроса
     query_kwargs = {}
+    # Если передали cafe_id, проверяем существование и добавляем фильтр
+    if cafe_id is not None:
+        cafe = await get_cafe_or_404(cafe_id=cafe_id, session=session)
+        query_kwargs['cafe'] = cafe
+    else:
+        cafe = None
     # Если параметр show_all не был передан или пользователь не является
     # админом или менеджером кафе, то добавляем фильтр active=True
     if show_all is not True or not is_admin_or_manager(
-        session=session,
-        cafe_id=cafe_id,
+        cafe=cafe,
         current_user=current_user,
     ):
         query_kwargs['active'] = True
 
-    # Если был передан параметр cafe_id, то добавляем его как фильтр для запроса
-    if cafe_id is not None:
-        query_kwargs['cafe_id'] = cafe_id
-
     return await dish_crud.get_by_field(
         session=session,
         many=True,
+        # Подгружаем данные
+        extra_uploading=True,
         **query_kwargs,
     )
 
@@ -62,20 +65,20 @@ async def create_dish(
         current_user: User = Depends(get_current_user),
         session: AsyncSession = Depends(get_async_session),
 ):
-    await check_admin_or_manager(
+    cafe = await get_cafe_or_404(
         session=session,
         cafe_id=dish.cafe_id,
+    )
+    await check_admin_or_manager(
+        cafe=cafe,
         current_user=current_user,
     )
     await check_dish_name_duplicate(
-        dish.name,
+        dish_name=dish.name,
+        cafe=cafe,
         session=session,
     )
-    await cafe_exists(
-        dish.cafe_id,
-        session,
-    )
-    new_dish = await dish_crud.create(dish, session)
+    new_dish = await dish_crud.create(obj_in=dish, session=session)
     return new_dish
 
 
@@ -90,10 +93,14 @@ async def get_dish_by_id(
         session: AsyncSession = Depends(get_async_session),
         current_user: User = Depends(get_current_user)
 ):
-    dish = await get_dish_or_404(dish_id, session)
-    if is_admin_or_manager(
+    dish = await get_dish_or_404(
+        dish_id=dish_id,
         session=session,
-        cafe_id=dish.cafe_id,
+        extra_uploading=True
+    )
+    cafe = await get_cafe_or_404(cafe_id=dish.cafe_id, session=session)
+    if is_admin_or_manager(
+        cafe=cafe,
         current_user=current_user,
     ) or dish.active is True:
         return dish
@@ -116,26 +123,27 @@ async def update_dish(
         current_user: User = Depends(get_current_user),
 ):
     current_dish = await get_dish_or_404(dish_id, session)
-    cafe_id = current_dish.cafe_id
-    await cafe_exists(cafe_id, session)
+    cafe = await get_cafe_or_404(
+        cafe_id=current_dish.cafe_id,
+        session=session
+    )
     await check_admin_or_manager(
-        session=session,
-        cafe_id=cafe_id,
+        cafe=cafe,
         current_user=current_user,
     )
+    new_cafe_id = new_dish.cafe_id
+    # Если передали кафе и оно не совпадает с текущим
+    if new_cafe_id is not None and new_cafe_id != cafe.id:
+        cafe = await get_cafe_or_404(cafe_id=new_cafe_id, session=session)
     if new_dish.name is not None:
         await check_dish_name_duplicate(
-            new_dish.name,
-            session,
-        )
-    if new_dish.cafe_id is not None:
-        await cafe_exists(
-            cafe_id=new_dish.cafe_id,
+            dish_name=new_dish.name,
+            cafe=cafe,
             session=session,
         )
     dish_result = await dish_crud.update(
-        current_dish,
-        new_dish,
-        session
+        db_obj=current_dish,
+        obj_in=new_dish,
+        session=session,
     )
     return dish_result
