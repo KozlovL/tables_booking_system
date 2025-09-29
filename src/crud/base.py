@@ -67,6 +67,7 @@ class CRUDBase:
             self,
             session: AsyncSession,
             many: bool = False,
+            extra_uploading: bool = False,
             **kwargs: Any
     ):
         """
@@ -84,14 +85,14 @@ class CRUDBase:
             session=session,
             slug='some_name'
         """
-        stmt = select(self.model).filter_by(**kwargs).options(
-            undefer(self.model.updated_at),
-            undefer(self.model.created_at),
-        )
-        # Если модель не кафе, то подгружаем менеджеров через cafe
-        if self.model != Cafe:
+        stmt = select(self.model).filter_by(**kwargs)
+        # Если модель не кафе и передали extra_uploading, то подгружаем
+        # менеджеров, кафе и даты
+        if self.model != Cafe and extra_uploading:
             stmt = stmt.options(
-                selectinload(self.model.cafe).selectinload(Cafe.managers)
+                selectinload(self.model.cafe).selectinload(Cafe.managers),
+                undefer(self.model.updated_at),
+                undefer(self.model.created_at),
             )
         result = await session.execute(stmt)
         scalars = result.scalars()
