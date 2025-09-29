@@ -1,4 +1,7 @@
-from sqlalchemy import String, Text, CheckConstraint, Integer, ForeignKey
+from sqlalchemy import (
+    String, Text, CheckConstraint, Integer, ForeignKey,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.db import Base, TimestampMixin, ActiveMixin
@@ -14,12 +17,15 @@ class Dish(Base, TimestampMixin, ActiveMixin):
     name: Mapped[str] = mapped_column(
         String(64),
         CheckConstraint('length(name) > 0', name='ck_dish_name_length'),
-        unique=True,
         nullable=False
     )
     price: Mapped[int] = mapped_column(Integer, nullable=False)
     description: Mapped[str] = mapped_column(Text)
     photo: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        UniqueConstraint('cafe_id', 'name', name='uc_dish_cafe_id_name_unique'),
+    )
 
     def __repr__(self):
         return (
