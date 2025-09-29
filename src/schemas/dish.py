@@ -15,7 +15,7 @@ class DishCreate(BaseModel):
     )
     description: str
     price: PositiveInt
-    photo: str | None
+    photo: str | None = None
 
     @field_validator('photo', mode='before')
     def validate_photo(cls, photo: str | None) -> str | None:
