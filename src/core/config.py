@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     first_superuser_password: Optional[str] = None
 
     # для Postgres (на проде)
-    db_dialect: Optional[str]
+    db_dialect: Optional[str] = None
     db_host: Optional[str] = 'localhost'
     postgres_user: str | None = None
     postgres_password: str | None = None

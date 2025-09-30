@@ -1,5 +1,5 @@
-from fastapi import HTTPException
-from sqlalchemy import select
+from fastapi import HTTPException, status
+from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.crud.table import table_crud
@@ -19,14 +19,18 @@ async def get_table_or_404(
         session, table_id, cafe_id, include_inactive
     )
     if not table:
-        raise HTTPException(status_code=404, detail='Стол или кафе не найдены')
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Стол или кафе не найдены'
+            )
     return table
 
 
 async def cafe_exists(cafe_id: int, session: AsyncSession) -> None:
     """Функция проверки существования кафе"""
-    cafe = await session.execute(
-        select(Cafe.id).where(Cafe.id == cafe_id)
-    )
-    if cafe.scalar() is None:
-        raise HTTPException(status_code=404, detail='Кафе не найдено')
+    exists_query = select(exists().where(Cafe.id == cafe_id))
+    if not await session.scalar(exists_query):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Кафе не найдено'
+        )
