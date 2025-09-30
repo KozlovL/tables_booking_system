@@ -1,8 +1,10 @@
+from http import HTTPStatus
+
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, exists
 
-from src.models import User, cafe_managers_table
+from src.models import User, cafe_managers_table, Cafe
 
 
 async def _is_manager_or_admin(
@@ -65,3 +67,30 @@ async def require_manager_or_admin(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Доступ запрещен'
         )  # поставил 403 потому что так правильно
+
+
+async def is_admin_or_manager(
+        cafe: Cafe | None,
+        current_user: User,
+) -> bool:
+    """Функция проверки пользователя на статус админа или менеджера кафе."""
+    # Если пользователь - админ, то возвращаем True
+    if current_user.is_superuser:
+        return True
+    # Если пользователь есть в списке менеджеров кафе
+    if cafe is not None and current_user in cafe.managers:
+        return True
+    # Если ничего не нашли возвращаем False
+    return False
+
+
+async def check_admin_or_manager(
+        cafe: Cafe,
+        current_user: User,
+) -> None:
+    """Функция валидации статуса пользователя."""
+    if not await is_admin_or_manager(cafe=cafe, current_user=current_user):
+        raise HTTPException(
+            status_code=HTTPStatus.UNAUTHORIZED,
+            detail='Необходима авторизация'
+        )

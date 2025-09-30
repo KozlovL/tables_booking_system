@@ -1,17 +1,15 @@
 from typing import Optional
 
-from pydantic import EmailStr, computed_field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import EmailStr
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     """Настройки приложения."""
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-
     app_title: str = 'Бронирование столиков'
     app_description: str = 'Проект «Бронирование мест в кафе»'
-    database_url: str = None
+    database_url: str
     secret: str
     jwt_algorithm: str
     access_token_expire_min: int = 120
@@ -30,7 +28,10 @@ class Settings(BaseSettings):
     postgres_host: str | None = None
     postgres_port: int | None = None
 
+    class Config:
+        """Конфигурация для загрузки переменных окружения."""
+
+        env_file = '.env'
 
 
 settings = Settings()
-
