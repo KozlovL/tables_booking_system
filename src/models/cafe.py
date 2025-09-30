@@ -43,3 +43,8 @@ class Cafe(Base, TimestampMixin, ActiveMixin):
         'Dish',
         back_populates='cafe'
     )
+    tables: Mapped[list['TableModel']] = relationship(
+        'TableModel',
+        back_populates='cafe',
+        lazy='selectin'
+    )

@@ -92,3 +92,29 @@ async def get_cafe_or_404(
             detail='Кафе не найдено'
         )
     return cafe
+
+
+async def check_unique_fields(  # проверяет уникальность полей(что бы избежать ошибки 500)
+    session: AsyncSession,
+    model,
+    exclude_id: int | None,
+    **field_values,
+) -> None:
+    """
+    Проверяет, что указанные значения полей уникальны для модели,
+    за исключением записи с exclude_id (если указан).
+    """
+    for field_name, value in field_values.items():
+        if value is None:
+            continue
+
+        query = select(model).where(getattr(model, field_name) == value)
+        if exclude_id is not None:
+            query = query.where(model.id != exclude_id)
+
+        existing = await session.scalar(query)
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f'{field_name} занято'
+            )
