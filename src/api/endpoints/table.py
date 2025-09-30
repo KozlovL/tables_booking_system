@@ -10,7 +10,7 @@ from src.api.validators import (
     cafe_exists,
 )
 from src.schemas.table import Table, TableCreate, TableUpdate
-from src.models.user import User
+from src.models import User
 
 router = APIRouter(prefix='/cafe/{cafe_id}/tables', tags=['Столы'])
 
@@ -24,7 +24,6 @@ async def get_tables_in_cafe(
     cafe_id: int,
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
-    include_inactive: bool = Depends(get_include_inactive)
 ) -> list[Table]:
     """
     Возвращает список столов в указанном кафе.
@@ -35,6 +34,9 @@ async def get_tables_in_cafe(
 
     """
     await cafe_exists(cafe_id, session)
+    include_inactive =  await get_include_inactive(
+        cafe_id, current_user, session
+    )
     tables = await table_crud.get_multi_by_cafe(
         session, cafe_id, include_inactive
     )
@@ -51,7 +53,7 @@ async def create_table(
     cafe_id: int,
     table_in: TableCreate,
     session: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(require_manager_or_admin)
+    current_user: User = Depends(get_current_user)
 ) -> Table:
     """
     Создает стол в указаном кафе.
@@ -60,6 +62,7 @@ async def create_table(
     - Менеджер кафе или администратор.
     """
     await cafe_exists(cafe_id, session)
+    await require_manager_or_admin(cafe_id, current_user, session)
     table = await table_crud.create(session, cafe_id, table_in)
     return table
 
@@ -74,7 +77,6 @@ async def get_table_by_id(
     table_id: int,
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
-    include_inactive: bool = Depends(get_include_inactive)
 ) -> Table:
     """
     Возвращает стол в указаном кафе по ID
@@ -83,6 +85,10 @@ async def get_table_by_id(
     - Все авторизованные пользователи могут просматривать активный стол/кафе.
     - Менеджеры кафе и администраторы видят также неактивный стол/кафе.
     """
+    await cafe_exists(cafe_id, session)
+    include_inactive = await get_include_inactive(
+        cafe_id, current_user, session
+    )
     table = await get_table_or_404(
         session, table_id, cafe_id, include_inactive
     )
@@ -99,7 +105,7 @@ async def update_table(
     table_id: int,
     table_in: TableUpdate,
     session: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(require_manager_or_admin)
+    current_user: User = Depends(get_current_user)
 ) -> Table:
     """
     Изменяет стол в указаном кафе
@@ -107,6 +113,8 @@ async def update_table(
     Права доступа:
     - Менеджер кафе или администратор.
     """
+    await cafe_exists(cafe_id, session)
+    await require_manager_or_admin(cafe_id, current_user, session)
     table = await get_table_or_404(
         session, table_id, cafe_id, include_inactive=True
     )

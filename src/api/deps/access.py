@@ -1,28 +1,27 @@
 from http import HTTPStatus
 
-from fastapi import Depends, Path, HTTPException
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, exists
-from typing import Optional
 
-from src.core.auth import get_current_user
-from src.core.db import get_async_session
-from src.crud.cafe import cafe_crud
 from src.models import User, cafe_managers_table, Cafe
 
 
 async def _is_manager_or_admin(
-    cafe_id: int | None,
+    cafe_id: int,
     user: User,
     session: AsyncSession
 ) -> bool:
     """
-    Базовая функция для определения администратора, менеджера или пользователя.
-    Менеджер и администратор - True.
-    Пользователь - False
+    Проверяет, имеет ли пользователь права администратора или менеджера
+    для указанного кафе.
+
+    Возвращает True, если пользователь:
+        - является суперпользователем (глобальный администратор), или
+        - назначен менеджером данного кафе (наличие записи в cafe_managers_table).
+
+    В противном случае возвращает False.
     """
-    if not user:
-        return False
     if user.is_superuser:
         return True
     query = select(exists().where(
@@ -33,13 +32,18 @@ async def _is_manager_or_admin(
 
 
 async def get_include_inactive(
-    cafe_id: int = Path(...),
-    current_user: Optional[User] = Depends(get_current_user),
-    session: AsyncSession = Depends(get_async_session),
+    cafe_id: int,
+    current_user: User,
+    session: AsyncSession,
 ) -> bool:
     """
-    Зависимость для включения неактивных объектов.
-    Возвращает булевое значение - результат функции.
+    Определяет, следует ли включать неактивные объекты (столы, блюда и т.д.) в ответ.
+
+    Возвращает True, если текущий пользователь имеет права на управление кафе
+    (является суперпользователем или менеджером кафе), иначе — False.
+
+    Используется как зависимость в эндпоинтах для динамического включения/исключения
+    неактивных записей в зависимости от прав доступа.
     """
     return await _is_manager_or_admin(cafe_id, current_user, session)
 
@@ -48,14 +52,21 @@ async def require_manager_or_admin(
     cafe_id: int,
     current_user: User,
     session: AsyncSession,
-) -> User:
+):
     """
-    Зависимость для вызова ошибки если пользователь не имеет прав.
-    Возвращает пользователя.
+    Проверяет, имеет ли текущий пользователь права на управление указанным кафе
+
+    Доступ разрешён, если пользователь:
+        - является суперпользователем (глобальный администратор), или
+        - назначен менеджером данного кафе.
+
+    В случае отсутствия прав вызывает HTTP 403 Forbidden.
     """
     if not await _is_manager_or_admin(cafe_id, current_user, session):
-        raise HTTPException(status_code=401, detail='Необходима авторизация')  # указал 401 потому что в спецификации нет 403
-    return current_user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Доступ запрещен'
+        )  # поставил 403 потому что так правильно
 
 
 async def is_admin_or_manager(
