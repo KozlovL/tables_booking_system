@@ -135,7 +135,8 @@ async def update_dish(
     # Если передали кафе и оно не совпадает с текущим
     if new_cafe_id is not None and new_cafe_id != cafe.id:
         cafe = await get_cafe_or_404(cafe_id=new_cafe_id, session=session)
-    if new_dish.name is not None:
+    new_dish_name = new_dish.name
+    if new_dish_name is not None and new_dish_name != current_dish.name:
         await check_dish_name_duplicate(
             dish_name=new_dish.name,
             cafe=cafe,
