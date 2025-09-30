@@ -42,8 +42,8 @@ class CafeUpdate(BaseModel):
     address: Optional[str] = Field(None, min_length=1, max_length=255)
     phone: Optional[PhoneNumber] = None          # у тебя может быть regex
     description: Optional[str] = None
-    photo: Optional[str] = None          # base64 или None (стереть)
-    managers: Optional[List[int]] = None # если передано — переопределяем список
+    photo: Optional[str] = None
+    managers: Optional[List[int]] = None
     active: Optional[bool] = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -1,10 +1,13 @@
+
 """initial user/cafe/table/dish migration
 
 Revision ID: f2afba011e77
 Revises: 
 Create Date: 2025-09-30 16:56:31.467726
 ========
+========
 """
+
 from alembic import op
 import sqlalchemy as sa
 
@@ -93,6 +96,7 @@ def upgrade():
     sa.Column('date', sa.Date(), nullable=False),
     sa.Column('start_time', sa.Time(), nullable=False),
     sa.Column('end_time', sa.Time(), nullable=False),
+    sa.Column('description', sa.String(), nullable=True),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
