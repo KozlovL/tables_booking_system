@@ -1,11 +1,12 @@
 from typing import Optional
 
 from pydantic import EmailStr
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Настройки приложения."""
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_title: str = 'Бронирование столиков'
     app_description: str = 'Проект «Бронирование мест в кафе»'
@@ -19,10 +20,15 @@ class Settings(BaseSettings):
     first_superuser_email: Optional[EmailStr] = None
     first_superuser_password: Optional[str] = None
 
-    class Config:
-        """Конфигурация для загрузки переменных окружения."""
+    # для Postgres (на проде)
+    db_dialect: Optional[str] = None
+    db_host: Optional[str] = 'localhost'
+    postgres_user: str | None = None
+    postgres_password: str | None = None
+    postgres_db: str | None = None
+    postgres_host: str | None = None
+    postgres_port: int | None = None
 
-        env_file = '.env'
 
 
 settings = Settings()

@@ -8,6 +8,7 @@ from src.core.security import get_password_hash
 from src.crud.user import user_crud
 from src.models.user import User
 from src.schemas.user import UserCreate, UserRead, UserUpdate
+from src.api.validators import check_unique_fields
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -80,6 +81,19 @@ async def update_user(
     # Если передан пароль — хэшируем
     if "password" in update_data:
         update_data["hashed_password"] = get_password_hash(update_data.pop("password"))
+
+    unique_fields = {'username', 'email', 'phone', 'tg_id'}
+    fields_to_check = {
+        k: v for k, v in update_data.items() if k in unique_fields
+    }
+
+    if fields_to_check:  # выдавало ошибку 500
+        await check_unique_fields(
+            session=session,
+            model=User,
+            exclude_id=user_id,
+            **fields_to_check
+        )
 
     updated_user = await user_crud.update(db_user, update_data, session)
     await session.commit()

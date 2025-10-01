@@ -4,3 +4,9 @@ from .user import (  # noqa
     UserShort,
     UserUpdate
 )
+from .table import(  # noqa
+    Table,
+    TableCreate,
+    TableShort,
+    TableUpdate
+)

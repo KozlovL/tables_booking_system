@@ -1,7 +1,7 @@
+from fastapi import HTTPException, status
+from sqlalchemy import exists, select
 from http import HTTPStatus
 
-from fastapi import HTTPException
-from sqlalchemy import select, exists
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.crud.cafe import cafe_crud
@@ -24,18 +24,19 @@ async def get_table_or_404(
         session, table_id, cafe_id, include_inactive
     )
     if not table:
-        raise HTTPException(status_code=404, detail='Стол или кафе не найдены')
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Стол или кафе не найдены'
+            )
     return table
 
 
 async def cafe_exists(cafe_id: int, session: AsyncSession) -> None:
     """Функция проверки существования кафе"""
-    cafe = await session.execute(
-        select(exists().where(Cafe.id == cafe_id))
-    )
-    if cafe.scalar() is None:
+    exists_query = select(exists().where(Cafe.id == cafe_id))
+    if not await session.scalar(exists_query):
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail='Кафе не найдено'
         )
 
@@ -91,3 +92,29 @@ async def get_cafe_or_404(
             detail='Кафе не найдено'
         )
     return cafe
+
+
+async def check_unique_fields(  # проверяет уникальность полей(что бы избежать ошибки 500)
+    session: AsyncSession,
+    model,
+    exclude_id: int | None,
+    **field_values,
+) -> None:
+    """
+    Проверяет, что указанные значения полей уникальны для модели,
+    за исключением записи с exclude_id (если указан).
+    """
+    for field_name, value in field_values.items():
+        if value is None:
+            continue
+
+        query = select(model).where(getattr(model, field_name) == value)
+        if exclude_id is not None:
+            query = query.where(model.id != exclude_id)
+
+        existing = await session.scalar(query)
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f'{field_name} занято'
+            )

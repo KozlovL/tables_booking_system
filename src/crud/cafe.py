@@ -98,9 +98,14 @@ class CRUDCafe(CRUDBase):
 
         # Если managers присутствует в payload — заменить связь
         if payload.managers is not None:
-            ids = payload.managers or []
+            ids = set(payload.managers) or []
+            current_ids = {user.id for user in cafe.managers}
+
             managers: list[User] = []
-            if ids:
+            if ids == current_ids:  # добавил проверку если переданы те же менеджеры что бы код не падал
+                pass
+
+            else:
                 res = await session.execute(select(User).where(User.id.in_(ids)))
                 managers = list(res.scalars())
                 found_ids = {u.id for u in managers}
