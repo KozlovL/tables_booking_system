@@ -10,23 +10,23 @@ from src.schemas.user import UserShort
 
 
 class CafeCreate(BaseModel):
-    """Схема для создания Кафе"""
+    """Схема для создания кафе."""
 
     name: str
     address: str
-    phone: PhoneNumber
+    phone: PhoneNumber  # type: ignore
     description: Optional[str] = None
-    photo: Optional[str] = None              # base64 строка
-    managers: List[int] = []                 # список ID менеджеров
+    photo: Optional[str] = None
+    managers: List[int] = []
 
 
 class CafeRead(BaseModel):
-    """Схема выдачи кафе наружу"""
+    """Схема для выдачи данных кафе наружу."""
 
     id: int
     name: str
     address: str
-    phone: PhoneNumber
+    phone: PhoneNumber  # type: ignore
     description: Optional[str] = None
     photo: Optional[str] = None
     active: bool
@@ -37,24 +37,25 @@ class CafeRead(BaseModel):
 
 
 class CafeUpdate(BaseModel):
+    """Схема для обновления данных кафе."""
+
     name: Optional[str] = Field(None, min_length=1, max_length=128)
     address: Optional[str] = Field(None, min_length=1, max_length=255)
-    phone: Optional[str] = None          # у тебя может быть regex
+    phone: Optional[str] = None  # можно добавить regex
     description: Optional[str] = None
-    photo: Optional[str] = None          # base64 или None (стереть)
-    managers: Optional[List[int]] = None # если передано — переопределяем список
+    photo: Optional[str] = None  # base64 или None (стереть)
+    managers: Optional[List[int]] = None
     active: Optional[bool] = None
-
     model_config = ConfigDict(from_attributes=True)
 
 
 class CafeShort(BaseModel):
-    """Схема выдачи кафе наружу кратко"""
+    """Краткая схема для выдачи кафе."""
 
     id: int
     name: str
     address: str
-    phone: PhoneNumber
+    phone: PhoneNumber  # type: ignore
     description: Optional[str] = None
     photo: Optional[str] = None
     active: bool

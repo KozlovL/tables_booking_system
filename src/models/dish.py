@@ -1,35 +1,69 @@
+from typing import TYPE_CHECKING, Optional
+
+from pydantic import BaseModel
 from sqlalchemy import (
-    String, Text, CheckConstraint, Integer, ForeignKey,
+    CheckConstraint,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.core.db import Base, TimestampMixin, ActiveMixin
+from src.core.db import ActiveMixin, Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from src.models.cafe import Cafe
 
 
 class Dish(Base, TimestampMixin, ActiveMixin):
-    """Модель блюда."""
+    """Модель блюда с ссылкой на кафе и уникальным названием."""
+
     cafe_id: Mapped[int] = mapped_column(
         ForeignKey('cafe.id', name='fk_dish_cafe_id'),
-        nullable=False
+        nullable=False,
     )
     cafe: Mapped['Cafe'] = relationship('Cafe', back_populates='dishes')
     name: Mapped[str] = mapped_column(
         String(64),
         CheckConstraint('length(name) > 0', name='ck_dish_name_length'),
-        nullable=False
+        nullable=False,
     )
     price: Mapped[int] = mapped_column(Integer, nullable=False)
     description: Mapped[str] = mapped_column(Text)
     photo: Mapped[str | None] = mapped_column(Text)
 
     __table_args__ = (
-        UniqueConstraint('cafe_id', 'name', name='uc_dish_cafe_id_name_unique'),
+        UniqueConstraint(
+            'cafe_id',
+            'name',
+            name='uc_dish_cafe_id_name_unique',
+        ),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
-            f'Название блюда - {self.name}. '
-            f'Цена блюда - {self.price}. '
-            f'Описание блюда - {self.description[:30]}. '
+            f'Dish(name={self.name}, price={self.price}, '
+            f'description={self.description[:30]!r})'
         )
+
+    #   ДОПИСАТЬ СОГЛАСНО ДОКУМЕНТАЦИИ!!! ЭТО ЗАГЛУШКИ!!!
+
+    class DishCreate(BaseModel):
+        """Схема создания нового блюда."""
+
+        name: str
+        price: int
+        description: Optional[str] = None
+        photo: Optional[str] = None
+        cafe_id: int
+
+
+class DishUpdate(BaseModel):
+    """Схема обновления существующего блюда."""
+
+    name: Optional[str] = None
+    price: Optional[int] = None
+    description: Optional[str] = None
+    photo: Optional[str] = None

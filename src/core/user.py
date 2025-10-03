@@ -24,7 +24,8 @@
 # logger = logging.getLogger(__name__)
 #
 #
-# async def get_user_db(session: AsyncSession = Depends(get_async_session)) -> (
+# async def get_user_db(
+#   session: AsyncSession = Depends(get_async_session)) -> (
 #         AsyncGenerator)[SQLAlchemyUserDatabase, None]:
 #     """Возвращает объект базы данных пользователей для FastAPI Users."""
 #     yield SQLAlchemyUserDatabase(session, User)
