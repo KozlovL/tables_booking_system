@@ -15,7 +15,11 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @log_request()
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    summary='Аутентификация пользователя',
+    )
 async def login(
     payload: LoginRequest,
     session: AsyncSession = Depends(get_async_session),
@@ -61,6 +65,7 @@ async def login(
     "/logout",
     response_model=UserRead,
     status_code=status.HTTP_200_OK,
+    summary='Выход из аккаунта',
 )
 async def logout(
     current_user: UserRead = Depends(get_current_user),

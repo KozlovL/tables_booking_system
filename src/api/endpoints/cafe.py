@@ -15,12 +15,13 @@ router = APIRouter(prefix="/cafes", tags=["Кафе"])
 
 
 @log_request()
-@router.post("",
-             response_model=CafeRead,
-             status_code=status.HTTP_201_CREATED,
-             dependencies=[Depends(require_admin)],
-             summary='Создание кафе',
-             )
+@router.post(
+    "",
+    response_model=CafeRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+    summary='Создание кафе (только для администратора)',
+    )
 async def create_cafe(
     payload: CafeCreate,
     session: AsyncSession = Depends(get_async_session),
@@ -44,11 +45,13 @@ async def create_cafe(
 
 
 @log_request()
-@router.get('',
-            response_model=list[CafeRead],
-            status_code=status.HTTP_200_OK,
-            summary='Получение списка кафе ',
-            )
+@router.get(
+    '',
+    response_model=list[CafeRead],
+    status_code=status.HTTP_200_OK,
+    summary='Получение списка кафе '
+            '(только для администратора, пользователь - только активные)',
+    )
 async def list_cafes(
     show_all: bool = Query(False,
                            description='Показать все кафе '
@@ -87,7 +90,8 @@ async def list_cafes(
     '/{cafe_id}',
     response_model=CafeRead,
     status_code=status.HTTP_200_OK,
-    summary='Получение кафе по ID',
+    summary='Получение кафе по ID '
+            '(только для администратора, пользователь - только активные)',
 )
 async def get_cafe(
     cafe_id: int,
@@ -121,12 +125,13 @@ async def get_cafe(
 
 
 @log_request()
-@router.patch("/{cafe_id}",
-              response_model=CafeRead,
-              status_code=status.HTTP_200_OK,
-              dependencies=[Depends(require_admin)],
-              summary='Обновление кафе по ID',
-              )
+@router.patch(
+    "/{cafe_id}",
+    response_model=CafeRead,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_admin)],
+    summary='Обновление кафе по ID (только для администратора)',
+    )
 async def update_cafe(
         cafe_id: int,
         payload: CafeUpdate,

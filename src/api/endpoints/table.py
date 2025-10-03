@@ -17,7 +17,9 @@ router = APIRouter(prefix='/cafe/{cafe_id}/tables', tags=['Столы'])
 @router.get(
     '',
     response_model=list[Table],
-    summary='Получение списка столов в кафе',
+    summary='Получение списка столов в кафе '
+            '(только для администратора и менеджера, '
+            'пользователь - только активные)',
 )
 async def get_tables_in_cafe(
     cafe_id: int,
@@ -51,7 +53,7 @@ async def get_tables_in_cafe(
     '',
     response_model=Table,
     status_code=status.HTTP_201_CREATED,
-    summary='Создание стола в кафе',
+    summary='Создание стола в кафе (только для администратора и менеджера)',
 )
 async def create_table(
     cafe_id: int,
@@ -77,7 +79,9 @@ async def create_table(
 @router.get(
     '/{table_id}',
     response_model=Table,
-    summary='Получение стола по ID',
+    summary='Получение стола по ID '
+            '(только для администратора и менеджера, '
+            'пользователь - только активные)',
 )
 async def get_table_by_id(
     cafe_id: int,
@@ -112,7 +116,7 @@ async def get_table_by_id(
 @router.patch(
     '/{table_id}',
     response_model=Table,
-    summary='Обновление стола по ID',
+    summary='Обновление стола по ID (только для администратора и менеджера)',
 )
 async def update_table(
     cafe_id: int,

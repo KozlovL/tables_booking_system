@@ -18,6 +18,7 @@ router = APIRouter(prefix='/users', tags=['users'])
     '',
     response_model=UserRead,
     status_code=status.HTTP_201_CREATED,
+    summary='Создание пользователя',
 )
 async def create_user_endpoint(
     payload: UserCreate,
@@ -43,7 +44,13 @@ async def create_user_endpoint(
 
 
 @log_request()
-@router.get('/me', response_model=UserRead, status_code=status.HTTP_200_OK)
+@router.get(
+    '/me',
+    response_model=UserRead,
+    status_code=status.HTTP_200_OK,
+    summary='Получение данных текущего пользователя '
+            '(доступно только текущему пользователю)',
+    )
 async def read_me(
     current_user: UserShort = Depends(get_current_user),
 ) -> UserRead:
@@ -57,7 +64,13 @@ async def read_me(
 
 
 @log_request()
-@router.patch('/me', response_model=UserUpdate, status_code=status.HTTP_200_OK)
+@router.patch(
+    '/me',
+    response_model=UserUpdate,
+    status_code=status.HTTP_200_OK,
+    summary='Обновление данных текущего пользователя '
+            '(доступно только текущему пользователю)',
+    )
 async def update_me(
     payload: UserUpdate,
     current_user: UserShort = Depends(get_current_user),
@@ -107,6 +120,7 @@ async def update_me(
     '/{user_id}',
     response_model=UserUpdate,
     status_code=status.HTTP_200_OK,
+    summary='Обновление данных пользователя по ID (только для администратора)',
 )
 async def update_user(
     user_id: int,
@@ -169,6 +183,7 @@ async def update_user(
     '/{user_id}',
     response_model=UserRead,
     status_code=status.HTTP_200_OK,
+    summary='Получение пользователя по ID (только для администратора)',
 )
 async def get_user_by_id(
     user_id: int,

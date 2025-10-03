@@ -22,7 +22,9 @@ router = APIRouter(prefix='/dishes', tags=['Блюдо'])
     '/',
     response_model=list[Dish],
     response_model_exclude_none=True,
-    summary='Получение списка всех блюд',
+    summary='Получение списка блюд '
+            '(только для администратора и менеджера, '
+            'пользователь - только активные)',
 )
 async def get_all_dishes(
     session: AsyncSession = Depends(get_async_session),
@@ -64,7 +66,7 @@ async def get_all_dishes(
     '/',
     response_model=Dish,
     response_model_exclude_none=True,
-    summary='Создание блюда',
+    summary='Создание блюда (только для администратора и менеджера)',
 )
 async def create_dish(
     dish: DishCreate,
@@ -100,7 +102,9 @@ async def create_dish(
     '/{dish_id}',
     response_model=Dish,
     response_model_exclude_none=True,
-    summary='Получение блюда по ID',
+    summary='Получение блюда по ID '
+            '(только для администратора и менеджера, '
+            'пользователь - только активные)',
 )
 async def get_dish_by_id(
     dish_id: int,
@@ -144,7 +148,7 @@ async def get_dish_by_id(
     '/{dish_id}',
     response_model=Dish,
     response_model_exclude_none=True,
-    summary='Изменение блюда по ID',
+    summary='Обновление блюда по ID (только для администратора и менеджера)',
 )
 async def update_dish(
     dish_id: int,
