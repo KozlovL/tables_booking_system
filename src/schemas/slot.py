@@ -28,9 +28,9 @@ class TimeSlotBase(BaseModel):
         if isinstance(v, str):
             t = time.fromisoformat(v)
             return t.replace(second=0, microsecond=0, tzinfo=None)
-        raise ValueError("Время должно быть в формате HH:MM")
+        raise ValueError('Время должно быть в формате HH:MM')
 
-    @model_validator(mode='before')
+    @model_validator(mode='after')
     def validate_times(self):
         if self.end_time <= self.start_time:
             raise ValueError(

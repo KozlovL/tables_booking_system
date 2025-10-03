@@ -10,3 +10,9 @@ from .table import(  # noqa
     TableShort,
     TableUpdate
 )
+from .slot import(
+    TimeSlotRead,
+    TimeSlotCreate,
+    TimeSlotUpdate,
+    TimeSlotShort
+)

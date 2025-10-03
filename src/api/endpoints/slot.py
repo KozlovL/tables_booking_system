@@ -3,17 +3,21 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps.access import require_manager_or_admin, get_include_inactive
-from src.api.validators import (cafe_exists, validate_and_check_conflicts,
-                                check_timeslot_before_edit)
+from src.api.validators import (
+    cafe_exists, validate_and_check_conflicts,
+    get_timeslot_or_404,
+    get_timeslot_or_404_with_relations
+    )
 from src.core.auth import get_current_user
 from src.core.db import get_async_session
 from src.crud.slot import time_slot_crud
-from src.models.user import User
-from src.schemas.slot import (
+from src.models import User
+from src.schemas import (
     TimeSlotCreate,
     TimeSlotRead,
-    TimeSlotUpdate,
+    TimeSlotUpdate
 )
+from src.api.deps import get_include_inactive
 
 router = APIRouter(
     prefix='/cafe/{cafe_id}/time_slots',
@@ -31,15 +35,10 @@ async def create_time_slot(
     cafe_id: int,
     slot_data: TimeSlotCreate = ...,
     session: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(require_manager_or_admin),
+    current_user: User = Depends(get_current_user),
 ) -> TimeSlotRead:
     await cafe_exists(cafe_id, session)
-
-    # if slot_data.cafe_id != cafe_id:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail='Cafe ID в пути и данных не совпадают',
-    #     )
+    await require_manager_or_admin(cafe_id, current_user, session)
 
     await validate_and_check_conflicts(
         cafe_id=cafe_id,
@@ -49,9 +48,7 @@ async def create_time_slot(
         session=session,
     )
 
-    slot = await time_slot_crud.create(session, cafe_id, slot_data)
-    await session.commit()
-    await session.refresh(slot)
+    slot = await time_slot_crud.create(cafe_id, slot_data, session)
     return slot
 
 
@@ -62,14 +59,15 @@ async def create_time_slot(
 )
 async def get_time_slots(
     cafe_id: int = Path(..., description='ID кафе'),
-    date_param: date = Query(default_factory=date.today, description=(
+    date_param: date = Query(default_factory=lambda: date.today(), description=(
         'Дата (YYYY-MM-DD), по умолчанию сегодня')),
-    include_inactive: bool = Depends(get_include_inactive),
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> list[TimeSlotRead]:
     await cafe_exists(cafe_id, session)
-
+    include_inactive = await get_include_inactive(
+        cafe_id, current_user, session
+    )
     slots = await time_slot_crud.get_multi_by_cafe_and_date(
         cafe_id=cafe_id,
         slot_date=date_param,
@@ -87,14 +85,12 @@ async def get_time_slots(
 async def get_time_slot_by_id(
     cafe_id: int = Path(..., description='ID кафе'),
     time_slot_id: int = Path(..., description='ID временного слота'),
-    include_inactive: bool = Depends(get_include_inactive),
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> TimeSlotRead:
-
-    slot = await time_slot_crud.get_with_cafe(time_slot_id, session)
-    if not slot or slot.cafe_id != cafe_id:
-        raise HTTPException(status_code=404, detail='Слот не найден')
+    await cafe_exists(cafe_id, session)
+    include_inactive = await get_include_inactive(cafe_id, current_user, session)
+    slot = await get_timeslot_or_404_with_relations(time_slot_id, session)
 
     if not slot.active and not include_inactive:
         raise HTTPException(status_code=404, detail='Слот не найден')
@@ -112,14 +108,19 @@ async def update_time_slot_by_id(
     time_slot_id: int = Path(..., description='ID временного слота'),
     slot_data: TimeSlotUpdate = ...,
     session: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(require_manager_or_admin),
+    current_user: User = Depends(get_current_user),
 ) -> TimeSlotRead:
-    slot = await check_timeslot_before_edit(time_slot_id, session)
+    await cafe_exists(cafe_id, session)
+    await require_manager_or_admin(cafe_id, current_user, session)
+    slot = await get_timeslot_or_404(time_slot_id, session)
 
-    new_date = slot_data.date or slot.date
-    new_start = slot_data.start_time or slot.start_time
-    new_end = slot_data.end_time or slot.end_time
-    print(new_start)
+    new_date = (slot_data.date if
+                slot_data.date is not None else slot.date)
+    new_start = (slot_data.start_time if
+                 slot_data.start_time is not None else slot.start_time)
+    new_end = (slot_data.end_time if
+               slot_data.end_time is not None else slot.end_time)
+
     await validate_and_check_conflicts(
         cafe_id=cafe_id,
         slot_date=new_date,
@@ -130,6 +131,4 @@ async def update_time_slot_by_id(
     )
 
     slot = await time_slot_crud.update(slot, slot_data, session)
-    await session.commit()
-    await session.refresh(slot)
     return slot

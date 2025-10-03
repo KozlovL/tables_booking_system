@@ -6,14 +6,8 @@ from http import HTTPStatus
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.crud.cafe import cafe_crud
-from src.crud.dish import dish_crud
-from src.crud.table import table_crud
-from src.models import Dish
-from src.crud.slot import time_slot_crud
-from src.models.table import TableModel
-from src.models.cafe import Cafe
-from src.models.slot import TimeSlot
+from src.crud import cafe_crud, dish_crud, table_crud, time_slot_crud
+from src.models import Cafe, Dish, TableModel, TimeSlot
 
 
 async def get_table_or_404(
@@ -150,12 +144,25 @@ async def check_unique_fields(  # проверяет уникальность п
 #     return None
 
 
-async def check_timeslot_before_edit(
+async def get_timeslot_or_404(
     timeslot_id: int,
     session: AsyncSession,
 ) -> TimeSlot:
     """Проверяет, что слот существует; если нет — 404."""
     timeslot = await time_slot_crud.get(obj_id=timeslot_id, session=session)
+    if not timeslot:
+        raise HTTPException(status_code=404, detail='Слот не найден!')
+    return timeslot
+
+
+async def get_timeslot_or_404_with_relations(
+    timeslot_id: int,
+    session: AsyncSession,
+) -> TimeSlot:
+    """Проверяет, что слот существует; если нет — 404."""
+    timeslot = await time_slot_crud.get_with_cafe(
+        slot_id=timeslot_id, session=session
+    )
     if not timeslot:
         raise HTTPException(status_code=404, detail='Слот не найден!')
     return timeslot
@@ -171,17 +178,16 @@ async def check_timeslot_intersections(
     session: AsyncSession,
 ) -> None:
     """Проверяет пересечения временных слотов"""
-    conflict = await time_slot_crud.check_time_conflict(
+    if await time_slot_crud.check_time_conflict(
         cafe_id=cafe_id,
         slot_date=slot_date,
         start_time=start_time,
         end_time=end_time,
         session=session,
         exclude_slot_id=timeslot_id,
-    )
-    if conflict:
+    ):
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail='Временной слот пересекается с существующим!',
         )
 
@@ -196,22 +202,24 @@ async def validate_and_check_conflicts(
     exclude_slot_id: Optional[int] = None,
 ) -> None:
     """Проверка для create/update слотов"""
-    # start = _to_naive_time(start_time)
-    # end = _to_naive_time(end_time)
+    start_time = start_time.replace(second=0, microsecond=0, tzinfo=None)
+    end_time = end_time.replace(second=0, microsecond=0, tzinfo=None)
     slot_datetime = datetime.combine(slot_date, start_time)
-
     if start_time is None or end_time is None:
-        raise HTTPException(status_code=400, detail='Неверный формат времени')
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail='Неверный формат времени'
+            )
 
     if start_time >= end_time:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail='Время начала должно быть раньше времени окончания',
         )
 
     if slot_datetime < datetime.now():
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail='Нельзя создавать слот в прошлом',
         )
 
@@ -223,3 +231,20 @@ async def validate_and_check_conflicts(
         timeslot_id=exclude_slot_id,
         session=session,
     )
+
+
+# async def get_slot_or_404(
+#     slot_id: int,
+#     session: AsyncSession,
+#     include_inactive: bool
+# ) -> TableModel:
+#     """Проверка существования объекта с cafe_id, slot_id."""
+#     slot = await time_slot_crud.get_with_cafe(
+#         slot_id, session
+#     )
+#     if not slot:
+#         raise HTTPException(
+#             status_code=status.HTTP_404_NOT_FOUND,
+#             detail='Слот или кафе не найдены'
+#             )
+#     return slot
