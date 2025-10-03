@@ -9,6 +9,8 @@ from src.crud.base import CRUDBase
 from src.models.cafe import Cafe
 from src.models.user import User
 
+class ManagersNotFoundError(Exception):
+    pass
 
 class CRUDCafe(CRUDBase):
     async def get_multi_filtered(
@@ -34,6 +36,7 @@ class CRUDCafe(CRUDBase):
             *,
             photo_url: Optional[str] = None,
     ) -> Cafe:
+        """ создает кафе с менеджерами """
         # 1) создаём кафе через базовый CRUD, исключив поля отношений/фото
 
         cafe = await self.create(
@@ -81,8 +84,9 @@ class CRUDCafe(CRUDBase):
             *,
             photo_url: Optional[str] = None,
     ) -> Cafe:
-        """Обновляет скалярные поля (через CRUDBase.update) и, если присланы managers,
-        валидирует список ID и заменяет связь many-to-many.
+        """Обновляет скалярные поля (через CRUDBase.update) и,
+        если присланы managers, валидирует список ID
+        и заменяет связь many-to-many.
         """
         data = payload
 
@@ -100,26 +104,27 @@ class CRUDCafe(CRUDBase):
         if payload.managers is not None:
             ids = set(payload.managers) or []
             current_ids = {user.id for user in cafe.managers}
+            # managers: list[User] = []
 
-            managers: list[User] = []
-            if ids == current_ids:  # добавил проверку если переданы те же менеджеры что бы код не падал
+            # если переданы те же менеджеры
+            if ids == current_ids:
+                print("те же менеджеры")
+                managers = cafe.managers
                 pass
 
             else:
+
                 res = await session.execute(select(User).where(User.id.in_(ids)))
                 managers = list(res.scalars())
                 found_ids = {u.id for u in managers}
                 missing = [mid for mid in ids if mid not in found_ids]
                 if missing:
                     # Откатит верхний уровень (middleware/handler), тут просто ошибка
-                    raise HTTPException(
-                        status_code=400,
-                        detail={"missing_manager_ids": missing},
-                    )
+                    raise ManagersNotFoundError(f"Нет таких менеджеров{missing}")
 
-            #переинициализируем коллекцию и заменяем
-            attributes.set_committed_value(cafe, "managers", [])
-            cafe.managers.extend(managers)
+
+
+            cafe.managers = managers
 
         await session.flush()
         cafe_id = cafe.id
@@ -133,6 +138,24 @@ class CRUDCafe(CRUDBase):
             .where(Cafe.id == cafe_id),
         )
         return res.scalar_one()
+
+    async def get_with_managers(
+          self,
+          cafe_id: int,
+          session: AsyncSession
+    ) -> Cafe | None:
+        """
+        Получает объект кафе по ID, подгружая
+        связанную коллекцию менеджеров.
+        """
+        query = (
+            select(self.model)
+            .options(selectinload(self.model.managers))
+            .where(self.model.id == cafe_id)
+        )
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
+
 
 
 cafe_crud = CRUDCafe(Cafe)
