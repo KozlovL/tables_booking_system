@@ -51,7 +51,7 @@ class CRUDUser(CRUDBase):
         res = await session.execute(select(User.id).where(or_(*conditions)))
         if res.scalar_one_or_none() is not None:
             logger.warning(
-                'Попытка создания дубликата пользователя: '
+                'Попытка создания дубликата пользователя, совпадение полей: '
                 f'{username}/{phone}/{email}/{tg_id}',
             )
             raise HTTPException(

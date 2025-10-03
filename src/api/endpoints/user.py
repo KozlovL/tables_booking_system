@@ -23,17 +23,17 @@ router = APIRouter(prefix='/users', tags=['users'])
 async def create_user_endpoint(
     payload: UserCreate,
     session: AsyncSession = Depends(get_async_session),
-    current_admin: UserShort = Depends(require_admin),
+    # current_admin: UserShort = Depends(require_admin),
 ) -> UserRead:
-    """Создание нового пользователя (админ)."""
+    """Создание нового пользователя."""
     user = await user_crud.create(payload, session)
     await session.commit()
     await session.refresh(user)
 
     logger.info(
         'Создан новый пользователь',
-        username=current_admin.username,
-        user_id=current_admin.id,
+        username=user.username,
+        user_id=user.id,
         details={
             'new_user_id': user.id,
             'username': user.username,
