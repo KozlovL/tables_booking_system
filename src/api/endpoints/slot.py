@@ -28,18 +28,18 @@ router = APIRouter(
     summary='Создание временного слота (для администратора и менеджера)',
 )
 async def create_time_slot(
-    cafe_id: int = Path(..., description='ID кафе'),
+    cafe_id: int,
     slot_data: TimeSlotCreate = ...,
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(require_manager_or_admin),
 ) -> TimeSlotRead:
     await cafe_exists(cafe_id, session)
 
-    if slot_data.cafe_id != cafe_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Cafe ID в пути и данных не совпадают',
-        )
+    # if slot_data.cafe_id != cafe_id:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail='Cafe ID в пути и данных не совпадают',
+    #     )
 
     await validate_and_check_conflicts(
         cafe_id=cafe_id,
@@ -49,7 +49,7 @@ async def create_time_slot(
         session=session,
     )
 
-    slot = await time_slot_crud.create(slot_data, session)
+    slot = await time_slot_crud.create(session, cafe_id, slot_data)
     await session.commit()
     await session.refresh(slot)
     return slot
@@ -115,13 +115,11 @@ async def update_time_slot_by_id(
     current_user: User = Depends(require_manager_or_admin),
 ) -> TimeSlotRead:
     slot = await check_timeslot_before_edit(time_slot_id, session)
-    if slot.cafe_id != cafe_id:
-        raise HTTPException(status_code=404, detail='Слот не найден')
 
     new_date = slot_data.date or slot.date
     new_start = slot_data.start_time or slot.start_time
     new_end = slot_data.end_time or slot.end_time
-
+    print(new_start)
     await validate_and_check_conflicts(
         cafe_id=cafe_id,
         slot_date=new_date,
