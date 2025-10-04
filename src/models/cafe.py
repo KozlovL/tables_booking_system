@@ -3,7 +3,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.db import ActiveMixin, Base, TimestampMixin
 
-#Определяем таблицу-связку
+# Определяем таблицу-связку
 cafe_managers_table = Table(
     "cafe_managers",
     Base.metadata,
@@ -39,3 +39,15 @@ class Cafe(Base, TimestampMixin, ActiveMixin):
         back_populates="managed_cafes",
         lazy="selectin",
     )
+    dishes: Mapped[list['Dish']] = relationship(
+        'Dish',
+        back_populates='cafe'
+    )
+    tables: Mapped[list['TableModel']] = relationship(
+        'TableModel',
+        back_populates='cafe',
+        lazy='selectin'
+    )
+    time_slots = relationship('TimeSlot', back_populates='cafe',
+                              lazy='selectin')
+    actions = relationship("Action", back_populates="cafe")

@@ -11,7 +11,7 @@ from src.core.types import PhoneNumber
 
 # Короткая версия для отдачи наружу
 class UserShort(BaseModel):
-    """Схема данные юзера для отдачи наружу"""
+    """Схема данные юзера для отдачи наружу."""
 
     id: int
     username: str                 # required
@@ -23,7 +23,7 @@ class UserShort(BaseModel):
 
 class UserCreate(BaseModel):
     """Схема создания пользователя."""
-    
+
     username: str = Field(..., min_length=3, max_length=128)
     phone: PhoneNumber # обязателен
     password: str = Field(..., min_length=6)
@@ -32,7 +32,7 @@ class UserCreate(BaseModel):
 
 
 class UserRead(BaseModel):
-    """Схема выдачи полных данных по юзеру"""
+    """Схема выдачи полных данных по юзеру."""
 
     id: int
     username: str
@@ -46,7 +46,7 @@ class UserRead(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    """Схема админ меняет данные пользователя"""
+    """Схема админ меняет данные пользователя."""
 
     username: Optional[str] = Field(None, min_length=3, max_length=128)
     email: Optional[EmailStr] = None

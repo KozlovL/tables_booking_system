@@ -3,9 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from src.models.cafe import Cafe
-from src.models.table import TableModel
-from src.schemas.table import TableCreate, TableUpdate
+from src.models import Cafe
+from src.models import TableModel
+from src.schemas import TableCreate, TableUpdate
 
 
 class TableCRUD:
@@ -16,9 +16,15 @@ class TableCRUD:
         table_id: Optional[int] = None,
         include_inactive: bool = False
     ):
-        """Базовый запрос для получения столов в кафе"""
+        """
+        Формирует запрос к таблице столов с фильтрацией по кафе и активности.
+
+        Если include_inactive=False, включает JOIN с Cafe и фильтрует
+        только активные столы и активное кафе.
+        """
+
         query = select(TableModel).options(
-            selectinload(TableModel.cafe)
+            selectinload(TableModel.cafe).selectinload(Cafe.managers)
             ).where(
                 TableModel.cafe_id == cafe_id
             )
@@ -38,7 +44,8 @@ class TableCRUD:
         table_id: int,
         cafe_id: int,
         include_inactive: bool = False
-    ) -> TableModel:
+    ) -> Optional[TableModel]:
+        """Возвращает стол по ID, привязанный к указанному кафе."""
         query = self._build_query(
             cafe_id=cafe_id,
             table_id=table_id,
@@ -53,6 +60,7 @@ class TableCRUD:
         cafe_id: int,
         include_inactive: bool = False
     ) -> List[TableModel]:
+        """Возвращает все столы в указанном кафе (активные по умолчанию)."""
         query = self._build_query(
             cafe_id=cafe_id,
             include_inactive=include_inactive
@@ -66,19 +74,18 @@ class TableCRUD:
         cafe_id: int,
         obj_in: TableCreate
     ) -> TableModel:
+        """
+        Создаёт новый стол в кафе и возвращает его с загруженными связями.
+        """
         db_obj = TableModel(**obj_in.model_dump(), cafe_id=cafe_id)
         session.add(db_obj)
-        # await session.flush()
         await session.commit()
         result = await session.execute(
             select(TableModel)
-            .options(selectinload(TableModel.cafe))
+            .options(selectinload(TableModel.cafe).selectinload(Cafe.managers))
             .where(TableModel.id == db_obj.id)
         )
-        updated_obj = result.scalar_one()
-        # await session.commit()
-        # await session.refresh(updated_obj)
-        return updated_obj
+        return result.scalar_one()
 
     async def update(
         self,
@@ -86,21 +93,21 @@ class TableCRUD:
         db_obj: TableModel,
         obj_in: TableUpdate
     ) -> TableModel:
+        """
+        Обновляет стол и возвращает обновлённый объект с загруженными связями.
+        """
         update_data = obj_in.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_obj, field, value)
         session.add(db_obj)
         await session.commit()
-        # await session.flush()
         result = await session.execute(
             select(TableModel)
-            .options(selectinload(TableModel.cafe))
+            .options(selectinload(TableModel.cafe).selectinload(Cafe.managers))
             .where(TableModel.id == db_obj.id)
         )
-        updated_obj = result.scalar_one()
 
-        # await session.refresh(updated_obj)
-        return updated_obj
+        return result.scalar_one()
 
 
 table_crud = TableCRUD()

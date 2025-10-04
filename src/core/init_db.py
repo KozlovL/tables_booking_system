@@ -2,7 +2,6 @@
 import logging
 
 from src.core.config import settings
-
 from src.core.db import AsyncSessionLocal
 from src.core.security import get_password_hash
 from src.crud.user import user_crud
@@ -49,6 +48,7 @@ async def create_user(
         await session.commit()
         await session.refresh(user)
         return user
+
 
 async def create_first_superuser() -> None:
     """Создает суперпользователя при старте приложения."""

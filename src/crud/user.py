@@ -1,6 +1,8 @@
 # src/crud/user.py
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,9 +16,11 @@ from src.schemas.user import UserCreate
 class CRUDUser(CRUDBase):
     """CRUD из CRUDBase, но create делает:
     - нормализацию username/phone/email/tg_id
-    - проверку уникальности (username, phone — всегда; email/tg_id — если заданы)
+    - проверку уникальности (
+        username, phone — всегда; email/tg_id — если заданы
+    )
     - хэширование пароля -> hashed_password
-    - единые дефолты для active/is_superuser/is_verified
+    - единые дефолты для active/is_superuser/is_verified.
     """
 
     model: type[User]
@@ -29,16 +33,20 @@ class CRUDUser(CRUDBase):
         exclude_fields: set[str] | None = None,
         **extra_fields,
     ) -> User:
-        # 1) нормализация входных полей
+        # 1) нормализация входных полей.
         username = obj_in.username.strip()
         phone = obj_in.phone.strip()
-        email = obj_in.email.lower().strip() if getattr(obj_in, "email", None) else None
-        tg_id = obj_in.tg_id.strip() if getattr(obj_in, "tg_id", None) else None
+        email = obj_in.email.lower().strip() if getattr(
+            obj_in, "email", None) else None
+        tg_id = obj_in.tg_id.strip() if getattr(
+            obj_in, "tg_id", None) else None
 
         if not username:
-            raise HTTPException(status_code=400, detail="Username cannot be empty")
+            raise HTTPException(
+                status_code=400, detail="Username cannot be empty")
         if not phone:
-            raise HTTPException(status_code=400, detail="Phone cannot be empty")
+            raise HTTPException(
+                status_code=400, detail="Phone cannot be empty")
 
         # 2) проверки уникальности
         conditions = [User.username == username, User.phone == phone]
@@ -51,7 +59,8 @@ class CRUDUser(CRUDBase):
         if res.scalar_one_or_none() is not None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User with same username/phone/email/tg_id already exists",
+                detail="User with same "
+                       "username/phone/email/tg_id already exists",
             )
 
         # 3) собираем данные для модели
@@ -74,7 +83,12 @@ class CRUDUser(CRUDBase):
         await session.flush()  # получим id
         return db_obj
 
-    async def get_by_fields(self, session, **fields):
+    async def get_by_fields(
+            self,
+            session: AsyncSession,
+            **fields: Any,
+    ) -> User | None:
+        """Поиск пользователя по указанным полям."""
         conditions = []
         if fields.get("username"):
             conditions.append(User.username == fields["username"])
