@@ -6,7 +6,8 @@ from sqlalchemy.orm import selectinload
 
 from src.core.auth import get_current_user, require_admin
 from src.core.db import get_async_session
-from src.crud.cafe import cafe_crud, ManagersNotFoundError
+from src.core.exceptions import ResourceNotFoundError, PermissionDeniedError
+from src.crud.cafe import cafe_crud
 from src.models.cafe import Cafe as CafeModel
 from src.models.user import User
 from src.schemas.cafe import CafeCreate, CafeRead, CafeUpdate
@@ -24,17 +25,11 @@ async def create_cafe(
     session: AsyncSession = Depends(get_async_session),
 ):
     photo_url = payload.photo if payload.photo else None
-
-    try:
-        cafe = await cafe_crud.create_with_managers(
+    cafe = await cafe_crud.create_with_managers(
         payload,
         session,
         photo_url=photo_url,
         )
-    except ManagersNotFoundError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=str(e)
-                            )
     return cafe
 
 @router.get('',
@@ -81,12 +76,10 @@ async def get_cafe(
     res = await session.execute(stmt)
     cafe = res.scalar_one_or_none()
     if not cafe:
-        raise HTTPException(404, 'Cafe not found')
-
+        raise ResourceNotFoundError("Кафе")
     if cafe.active or current_user.is_superuser:
         return cafe
-
-    raise HTTPException(403, 'Not enough permissions')
+    raise PermissionDeniedError()
 
 
 @router.patch("/{cafe_id}",
@@ -102,22 +95,18 @@ async def update_cafe(
 ):
     cafe = await cafe_crud.get_with_managers(cafe_id, session)
     if not cafe:
-        raise HTTPException(404, 'Cafe not found')
+        raise ResourceNotFoundError("Кафе")
 
         # 2. Обработка фото (base64 → путь)
     update_data = payload.model_dump(exclude_unset=True)
     photo_url = None
     if 'photo' in update_data and update_data['photo']:
             photo_url = update_data['photo']
-    try:
-        cafe = await cafe_crud.update_with_managers(
+    cafe = await cafe_crud.update_with_managers(
         cafe,
         payload,
         session,
         photo_url=photo_url,
         )
-    except ManagersNotFoundError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=str(e)
-                            )
     return cafe
+

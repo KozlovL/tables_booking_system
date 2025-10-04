@@ -10,7 +10,7 @@ from src.core.security import get_password_hash
 from src.crud.base import CRUDBase
 from src.models.user import User
 from src.schemas.user import UserCreate, UserUpdate
-from src.core.exceptions import InvalidUserData, UserAlreadyExists
+from src.core.exceptions import DuplicateError
 
 
 class CRUDUser(CRUDBase):
@@ -37,10 +37,6 @@ class CRUDUser(CRUDBase):
         email = obj_in.email.lower().strip() if getattr(obj_in, "email", None) else None
         tg_id = obj_in.tg_id.strip() if getattr(obj_in, "tg_id", None) else None
 
-        if not username:
-            raise InvalidUserData("Имя пользователя не может быть пустым")
-        if not phone:
-            raise InvalidUserData("Телефон не может быть пустым")
 
         # 2) проверки уникальности
         request = select(User).where(
@@ -54,19 +50,19 @@ class CRUDUser(CRUDBase):
         existing_user = (await session.execute(request)).scalar_one_or_none()
         if existing_user:
             if existing_user.username == username:
-                raise UserAlreadyExists(f"Пользователь "
+                raise DuplicateError(f"Пользователь "
                                         f"с именем '{username}' "
                                         f"уже существует.")
             if existing_user.phone == phone:
-                raise UserAlreadyExists(f"Пользователь "
+                raise DuplicateError(f"Пользователь "
                                         f"с телефоном '{phone}' "
                                         f"уже существует.")
             if email and existing_user.email == email:
-                raise UserAlreadyExists(f"Пользователь "
+                raise DuplicateError(f"Пользователь "
                                         f"с email '{email}' "
                                         f"уже существует.")
             if tg_id and existing_user.tg_id == tg_id:
-                raise UserAlreadyExists(f"Пользователь "
+                raise DuplicateError(f"Пользователь "
                                         f"с Telegram ID '{tg_id}' "
                                         f"уже существует.")
 

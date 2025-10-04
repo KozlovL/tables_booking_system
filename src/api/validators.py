@@ -4,6 +4,7 @@ from http import HTTPStatus
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.exceptions import DuplicateError, ResourceNotFoundError
 from src.crud.cafe import cafe_crud
 from src.crud.dish import dish_crud
 from src.crud.table import table_crud
@@ -24,10 +25,7 @@ async def get_table_or_404(
         session, table_id, cafe_id, include_inactive
     )
     if not table:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Стол или кафе не найдены'
-            )
+        raise ResourceNotFoundError (resource_name= "Стол")
     return table
 
 
@@ -35,10 +33,7 @@ async def cafe_exists(cafe_id: int, session: AsyncSession) -> None:
     """Функция проверки существования кафе"""
     exists_query = select(exists().where(Cafe.id == cafe_id))
     if not await session.scalar(exists_query):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Кафе не найдено'
-        )
+        raise ResourceNotFoundError("Кафе")
 
 
 async def check_dish_name_duplicate(
@@ -53,9 +48,8 @@ async def check_dish_name_duplicate(
         cafe=cafe,
     )
     if dish is not None:
-        raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST,
-            detail='Блюдо с таким названием уже существует!',
+        raise DuplicateError(
+            entity='Блюдо'
         )
 
 
@@ -70,10 +64,7 @@ async def get_dish_or_404(
         id=dish_id,
     )
     if dish is None:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
-            detail='Блюдо не найдено'
-        )
+        raise ResourceNotFoundError(resource_name="блюдо")
     return dish
 
 
@@ -87,10 +78,7 @@ async def get_cafe_or_404(
         id=cafe_id,
     )
     if cafe is None:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
-            detail='Кафе не найдено'
-        )
+        raise ResourceNotFoundError(resource_name="Кафе")
     return cafe
 
 
@@ -114,7 +102,4 @@ async def check_unique_fields(  # проверяет уникальность п
 
         existing = await session.scalar(query)
         if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f'{field_name} занято'
-            )
+            raise DuplicateError

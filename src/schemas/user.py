@@ -1,10 +1,8 @@
-
 # src/schemas/user.py
-
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from src.core.types import PhoneNumber
 
@@ -48,9 +46,22 @@ class UserRead(BaseModel):
 class UserUpdate(BaseModel):
     """Схема админ меняет данные пользователя"""
 
-    username: Optional[str] = Field(None, min_length=3, max_length=128)
-    email: Optional[EmailStr] = None
-    phone: Optional[PhoneNumber] = None
-    tg_id: Optional[str] = None
-    password: Optional[str] = None
-    active: Optional[bool] = None
+    username: str | None = Field(default=None, min_length=3, max_length=128)
+    email: EmailStr | None = None
+    phone: PhoneNumber | None = None
+    tg_id: str | None = None
+    password: str | None = None
+    active: bool | None = None
+
+    model_config = ConfigDict(extra='forbid')
+
+    @field_validator('username', 'password', 'tg_id', 'phone', mode='before')
+    @classmethod
+    def prevent_empty_str(cls, value: Any) -> Any | None:
+        """
+        Универсальный валидатор, который не позволяет передавать пустые строки
+        для текстовых полей.
+        """
+        if isinstance(value, str) and len(value) == 0:
+            raise ValueError("не может быть пустой строкой")
+        return value

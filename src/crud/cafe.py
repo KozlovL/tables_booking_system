@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import attributes, selectinload
 
-from src.core.exceptions import ManagersNotFoundError
+from src.core.exceptions import ResourceNotFoundError
 from src.crud.base import CRUDBase
 from src.models.cafe import Cafe
 from src.models.user import User
@@ -54,8 +54,7 @@ class CRUDCafe(CRUDBase):
             found_ids = {u.id for u in managers}
             missing = [mid for mid in payload.managers if mid not in found_ids]
             if missing:
-                # Не коммитим — откатывать на уровне middleware/handler
-                raise ManagersNotFoundError(f"Нет таких менеджеров{missing}")
+                raise ResourceNotFoundError(f"Нет таких менеджеров{missing}")
 
             attributes.set_committed_value(cafe, "managers", [])  # коллекция «инициализирована»
             cafe.managers.extend(managers)
@@ -106,21 +105,16 @@ class CRUDCafe(CRUDBase):
 
             # если переданы те же менеджеры
             if ids == current_ids:
-                print("те же менеджеры")
                 managers = cafe.managers
                 pass
 
             else:
-
                 res = await session.execute(select(User).where(User.id.in_(ids)))
                 managers = list(res.scalars())
                 found_ids = {u.id for u in managers}
                 missing = [mid for mid in ids if mid not in found_ids]
                 if missing:
-                    # Откатит верхний уровень (middleware/handler), тут просто ошибка
-                    raise ManagersNotFoundError(f"Нет таких менеджеров{missing}")
-
-
+                    raise ResourceNotFoundError(f"не найдены менедженры {missing}")
 
             cafe.managers = managers
 

@@ -36,7 +36,7 @@ services:
       # Контекст сборки - родительская папка (..), чтобы Docker мог видеть папки `src` и `alembic`
       build:
         context: ..
-        dockerfile: infra/Dockerfile
+        dockerfile: Dockerfile
       # Загружаем переменные (DATABASE_URL, SECRET_KEY) из файла .env_prod
       env_file:
         - ../.env_prod

@@ -9,8 +9,9 @@ from src.crud.user import user_crud
 from src.models.user import User
 from src.schemas.user import UserCreate, UserRead, UserUpdate
 from src.api.validators import check_unique_fields
-from src.core.exceptions import (UserAlreadyExists,
-                                 InvalidUserData)
+from src.core.exceptions import (ResourceNotFoundError,
+                                 DuplicateError
+                                 )
 router = APIRouter(prefix="/users", tags=["users"])
 
 
@@ -23,21 +24,10 @@ async def create_user_endpoint(payload: UserCreate,
                                Depends(get_async_session),
                                current_admin=Depends(require_admin),
                                ):
-    try:
         user = await user_crud.create(payload, session)
         await session.commit()
         await session.refresh(user)
         return user
-    except UserAlreadyExists as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=e.detail,
-        )
-    except InvalidUserData as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=e.detail,
-        )
 
 
 
@@ -55,16 +45,15 @@ async def update_me(
     # сущность из БД
     db_user = await user_crud.get(current_user.id, session)
     if not db_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
+        raise ResourceNotFoundError("Пользователь")
 
     data = payload.model_dump(exclude_unset=True)
 
     # если пришёл пароль — хэшируем
     if "password" in data:
         data["hashed_password"] = get_password_hash(data.pop("password"))
+
+
 
     # ограничим список меняемых колонок (на всякий случай)
     updatable = {"username", "email", "phone", "tg_id", "hashed_password"}
@@ -81,21 +70,14 @@ async def update_me(
             **fields_to_check
         )
 
-    try:
-        db_user = await  user_crud.update(db_user, data, session, updatable_fields=updatable)
-        await session.commit()
-        await session.refresh(db_user)
-        return db_user
-    except UserAlreadyExists as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=e.detail,
-        )
-    except InvalidUserData as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=e.detail,
-        )
+    db_user = await  user_crud.update(db_user,
+                                      data,
+                                      session,
+                                      updatable_fields=updatable
+                                      )
+    await session.commit()
+    await session.refresh(db_user)
+    return db_user
 
 
 @router.patch("/{user_id}",
@@ -147,5 +129,7 @@ async def get_user_by_id(
     current_admin=Depends(require_admin),
 ):
     db_user = await user_crud.get(user_id, session)
+    if db_user is None:
+        raise ResourceNotFoundError("Пользователь")
     return db_user
 
