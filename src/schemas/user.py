@@ -50,7 +50,7 @@ class UserUpdate(BaseModel):
 
     username: Optional[str] = Field(None, min_length=3, max_length=128)
     email: Optional[EmailStr] = None
-    phone: PhoneNumber = None
+    phone: Optional[PhoneNumber] = None
     tg_id: Optional[str] = None
     password: Optional[str] = None
     active: Optional[bool] = None

@@ -9,7 +9,8 @@ from src.crud.user import user_crud
 from src.models.user import User
 from src.schemas.user import UserCreate, UserRead, UserUpdate
 from src.api.validators import check_unique_fields
-
+from src.core.exceptions import (UserAlreadyExists,
+                                 InvalidUserData)
 router = APIRouter(prefix="/users", tags=["users"])
 
 
@@ -22,10 +23,22 @@ async def create_user_endpoint(payload: UserCreate,
                                Depends(get_async_session),
                                current_admin=Depends(require_admin),
                                ):
-    user = await user_crud.create(payload, session)
-    await session.commit()
-    await session.refresh(user)
-    return user
+    try:
+        user = await user_crud.create(payload, session)
+        await session.commit()
+        await session.refresh(user)
+        return user
+    except UserAlreadyExists as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.detail,
+        )
+    except InvalidUserData as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.detail,
+        )
+
 
 
 @router.get("/me", response_model=UserRead, status_code=status.HTTP_200_OK)
@@ -55,11 +68,34 @@ async def update_me(
 
     # ограничим список меняемых колонок (на всякий случай)
     updatable = {"username", "email", "phone", "tg_id", "hashed_password"}
-    await user_crud.update(db_user, data, session, updatable_fields=updatable)
 
-    await session.commit()
-    await session.refresh(db_user)
-    return db_user
+    unique_fields = {'username', 'email', 'phone', 'tg_id'}
+    fields_to_check = {
+        k: v for k, v in data.items() if k in unique_fields
+    }
+    if fields_to_check:  # выдавало ошибку 500
+        await check_unique_fields(
+            session=session,
+            model=User,
+            exclude_id=db_user.id,
+            **fields_to_check
+        )
+
+    try:
+        db_user = await  user_crud.update(db_user, data, session, updatable_fields=updatable)
+        await session.commit()
+        await session.refresh(db_user)
+        return db_user
+    except UserAlreadyExists as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.detail,
+        )
+    except InvalidUserData as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.detail,
+        )
 
 
 @router.patch("/{user_id}",

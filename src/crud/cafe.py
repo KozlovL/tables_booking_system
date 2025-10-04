@@ -5,12 +5,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import attributes, selectinload
 
+from src.core.exceptions import ManagersNotFoundError
 from src.crud.base import CRUDBase
 from src.models.cafe import Cafe
 from src.models.user import User
-
-class ManagersNotFoundError(Exception):
-    pass
 
 class CRUDCafe(CRUDBase):
     async def get_multi_filtered(
@@ -57,7 +55,7 @@ class CRUDCafe(CRUDBase):
             missing = [mid for mid in payload.managers if mid not in found_ids]
             if missing:
                 # Не коммитим — откатывать на уровне middleware/handler
-                raise HTTPException(status_code=400, detail={'missing_manager_ids': missing})
+                raise ManagersNotFoundError(f"Нет таких менеджеров{missing}")
 
             attributes.set_committed_value(cafe, "managers", [])  # коллекция «инициализирована»
             cafe.managers.extend(managers)

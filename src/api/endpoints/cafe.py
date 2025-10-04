@@ -24,13 +24,18 @@ async def create_cafe(
     session: AsyncSession = Depends(get_async_session),
 ):
     photo_url = payload.photo if payload.photo else None
-    cafe = await cafe_crud.create_with_managers(
+
+    try:
+        cafe = await cafe_crud.create_with_managers(
         payload,
         session,
-        photo_url=photo_url
-    )
+        photo_url=photo_url,
+        )
+    except ManagersNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=str(e)
+                            )
     return cafe
-
 
 @router.get('',
             response_model=list[CafeRead],
@@ -104,9 +109,6 @@ async def update_cafe(
     photo_url = None
     if 'photo' in update_data and update_data['photo']:
             photo_url = update_data['photo']
-
-
-
     try:
         cafe = await cafe_crud.update_with_managers(
         cafe,
