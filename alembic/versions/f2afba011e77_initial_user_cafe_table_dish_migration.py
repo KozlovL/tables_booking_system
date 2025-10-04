@@ -119,7 +119,6 @@ def upgrade():
     )
     with op.batch_alter_table('actions', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_actions_id'), ['id'], unique=False)
-
     # ### end Alembic commands ###
 
 
