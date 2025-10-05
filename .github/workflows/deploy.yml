@@ -104,11 +104,13 @@ jobs:
             sleep 15
             
             echo ">>> 4. Applying database migrations..."
-            # Замените 'web' на имя вашего сервиса, если оно другое (например, 'api')
+            # 'web'  - имя  сервиса из docker-compose
             docker compose exec web alembic upgrade head
-            
-            echo ">>> 5. Creating superuser (if not exists)..."
+            sleep 15
+          
+            echo ">>> 5. Creating superuser (if not exists)"
             docker compose exec web python src/core/create_superuser.py
+            sleep 15
 
             echo ">>> 6. Cleaning up old Docker images..."
             # Удаляем старые, неиспользуемые образы, чтобы освободить место

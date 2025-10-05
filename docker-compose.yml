@@ -27,7 +27,7 @@ services:
 
   web:
       container_name: tables_booking_system
-      # Указываем, откуда скачивать образ. Замените shemah77 на ваш ник!
+      # Указываем, откуда скачивать образ. Замените shemah77 на ваш ник
       image: ghcr.io/shemah77/tables_booking_system_team1:latest
       env_file: .env_prod
       ports:
