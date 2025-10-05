@@ -5,7 +5,7 @@ name: Build and Deploy to Production
 on:
   push:
     branches:
-      #- main
+      #- develop
       - feature/CICD # выбрать нужную ветку
 
 env:
