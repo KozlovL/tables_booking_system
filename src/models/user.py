@@ -49,3 +49,7 @@ class User(Base, TimestampMixin, ActiveMixin):
         back_populates="managers",
         lazy="selectin",  # ускорит выборку менеджеров вместе с кафе
     )
+
+    @property
+    def managed_cafe_ids(self) -> set[int]:
+        return {cafe.id for cafe in self.managed_cafes}
