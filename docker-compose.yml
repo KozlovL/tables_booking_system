@@ -26,18 +26,16 @@ services:
     restart: unless-stopped
 
   web:
-    container_name: booking_cafe
-    build: .
-    env_file:
-      - .env_prod
-    ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-    # ИСПРАВЛЕНО: Команда теперь простая и не содержит миграций и --reload
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000
-    restart: unless-stopped
+      container_name: tables_booking_system
+      # Указываем, откуда скачивать образ. Замените shemah77 на ваш ник!
+      image: ghcr.io/shemah77/tables_booking_system_team1:latest
+      env_file: .env.prod
+      ports:
+        - "8000:8000"
+      depends_on:
+        db:
+          condition: service_healthy
+      restart: unless-stopped
 
 volumes:
   pg_data: {}
