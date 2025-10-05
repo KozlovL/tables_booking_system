@@ -16,3 +16,15 @@ from .slot import (  # noqa
     TimeSlotUpdate,
     TimeSlotShort,
 )
+from .table import(  # noqa
+    Table,
+    TableCreate,
+    TableShort,
+    TableUpdate
+)
+from .slot import(
+    TimeSlotRead,
+    TimeSlotCreate,
+    TimeSlotUpdate,
+    TimeSlotShort
+)
