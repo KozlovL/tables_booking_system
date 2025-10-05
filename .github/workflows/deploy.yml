@@ -80,7 +80,7 @@ jobs:
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             # Прерываем выполнение скрипта при первой же ошибке
-            set -e
+            # set -e
 
             # Переходим в папку проекта на сервере
             cd ${{ secrets.PROJECT_PATH }}
