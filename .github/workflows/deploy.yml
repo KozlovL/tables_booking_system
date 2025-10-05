@@ -8,10 +8,6 @@ on:
       #- main
       - feature/CICD # выбрать нужную ветку
 
-# ===================================================================================
-# Переменные окружения, доступные для всех задач (jobs) в этом workflow.
-# Это помогает избежать повторения длинных строк и упрощает изменение в одном месте.
-# ===================================================================================
 env:
   IMAGE_NAME: ghcr.io/shemah77/tables_booking_system_team1
 
@@ -40,6 +36,11 @@ jobs:
           registry: ghcr.io
           username: ${{ secrets.DOCKER_USERNAME }} # Ваш ник на GitHub
           password: ${{ secrets.DOCKER_PASSWORD }}      # Ваш PAT с правом write:packages
+
+      - name: List files in the repository
+        run: |
+          echo "Listing files in the current directory:"
+          ls -la
 
       # Шаг 1.3: Собираем Docker-образ и загружаем его в registry
       - name: Build and push Docker image
