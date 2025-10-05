@@ -103,7 +103,12 @@ jobs:
             
             echo ">>> 4. Applying database migrations..."
             # 'web'  - имя  сервиса из docker-compose
-            docker compose exec -T web alembic upgrade head || true
+            if docker compose exec -T web alembic upgrade head; then
+                echo "Migrations applied successfully or nothing to apply."
+            else
+                echo "Warning: Alembic command finished with a non-zero exit code. Continuing deployment..."
+            fi
+          
             
           
             echo ">>> 5. Creating superuser (if not exists)"
