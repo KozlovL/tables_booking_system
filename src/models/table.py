@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, ForeignKey, CheckConstraint
 from src.core.db import Base
-
 from src.core.db import ActiveMixin, Base, TimestampMixin
 
 
