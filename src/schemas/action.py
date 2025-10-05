@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, model_serializer
+from pydantic import BaseModel, ConfigDict, PositiveInt, model_serializer
 
 from src.schemas.cafe import CafeShort
 
@@ -22,7 +22,8 @@ class ActionCreate(ActionBase):
 class ActionUpdate(ActionBase):
     """Схема для обновления существующей акции."""
 
-    cafe_id: Optional[int] = 1
+    cafe_id: Optional[PositiveInt] = None
+    description: Optional[str] = None
     active: Optional[bool] = None
 
 

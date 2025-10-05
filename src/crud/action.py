@@ -47,12 +47,6 @@ class ActionCRUD:
             selectinload(Action.cafe).selectinload(Cafe.managers),
         ).where(Action.id == action_id)
 
-        if not include_inactive:
-            query = query.join(Cafe, Action.cafe_id == Cafe.id).where(
-                Action.active.is_(True),
-                Cafe.active.is_(True),
-            )
-
         result = await session.execute(query)
         return result.scalars().first()
 
