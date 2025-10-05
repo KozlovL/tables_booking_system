@@ -1,29 +1,25 @@
-# Шаблон для проектов со стилизатором Ruff
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)  ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)  ![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)  ![FastAPI](https://img.shields.io/badge/FastAPI-0.68+-green.svg)  ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-1.4%2B-blue.svg)  ![Logging](https://img.shields.io/badge/logging-stdlib-yellow.svg)
 
-## Основное
+# Проект «Бронирование мест в кафе»
 
-1. Базовая версия Python - 3.11.
-2. В файле `requirements_style.txt` находятся зависимости для стилистики.
-3. В каталоге `src` находится базовая структура проекта
-4. В файле `srd/requirements.txt` прописываются базовые зависимости.
-5. В каталоге `infra` находятся настроечные файлы проекта. Здесь же размещать файлы для docker compose.
+### Описание проекта:
 
-## Стилистика
+Проект «Бронирование мест в кафе» - представляет собой приложение, которое предоставляет API (backend) для управления бронированием мест в кафе, просмотром и предварительным заказом меню, просмотром действующих акций.
 
-Для стилизации кода используется пакеты `Ruff` и `Pre-commit`
+### Возможности проекта:
 
-Проверка стилистики кода осуществляется командой
-```shell
-ruff check
-```
+### Технологии:
 
-Если одновременно надо пофиксить то, что можно поиксить автоматически, то добавляем параметр `--fix`
-```shell
-ruff check --fix
-```
+- Python 3.11, 3.12
+- FastAPI
+- Docker
+- Postgres
+- SQLAlchemy 2.0
+- Logging
 
-Что бы стилистика автоматически проверялась и поправлялась при комитах надо добавить hook pre-commit к git
+### Примеры запросов:
 
-```shell
-pre-commit install
-```
+## Разработчики (исполнители):
+
+
+### Проект выполнен в рамках выполнения этапа обучения "Проектный месяц: командная работа" в "Яндекс Практикум"
