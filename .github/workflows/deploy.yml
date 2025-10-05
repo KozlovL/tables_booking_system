@@ -85,9 +85,9 @@ jobs:
             # Переходим в папку проекта на сервере
             cd ${{ secrets.PROJECT_PATH }}
 
-            echo ">>> 1. Creating .env.prod file..."
+            echo ">>> 1. Creating .env_prod file..."
             # Безопасно создаем файл с переменными окружения из секрета GitHub
-            echo "${{ secrets.ENV_PROD_VARS }}" > .env.prod
+            echo "${{ secrets.ENV_PROD_VARS }}" >.env_prod
 
             echo ">>> 2. Pulling the latest Docker image from GHCR..."
             # Скачиваем с тегом 'latest' из вашего личного registry
@@ -96,6 +96,8 @@ jobs:
             echo ">>> 3. Restarting services with the new image..."
             # Docker Compose автоматически найдет обновленный образ по имени и тегу,
             # и пересоздаст только те контейнеры, которые его используют.
+            docker compose down 
+            sleep 15
             docker compose up -d
 
             echo ">>> Waiting 15 seconds for services to stabilize..."
@@ -106,12 +108,12 @@ jobs:
             docker compose exec web alembic upgrade head
             
             echo ">>> 5. Creating superuser (if not exists)..."
-            docker compose exec web python -m src/core/create_superuser.py
+            docker compose exec web python src/core/create_superuser.py
 
             echo ">>> 6. Cleaning up old Docker images..."
             # Удаляем старые, неиспользуемые образы, чтобы освободить место
             docker image prune -f
-
+          
             echo "✅ Deployment successful!"
           EOF
           
