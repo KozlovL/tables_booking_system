@@ -1,67 +1,115 @@
-name: Deploy to Production Server
+# Имя workflow, которое будет отображаться в интерфейсе GitHub Actions
+name: Build and Deploy to Production
 
-# Запускаем workflow при пуше в ветку 'main'
+# Триггер: запускать при пуше в указанные ветки
 on:
   push:
     branches:
-      - feature/CICD
+      #- main
+      - feature/CICD # выбрать нужную ветку
+
+# ===================================================================================
+# Переменные окружения, доступные для всех задач (jobs) в этом workflow.
+# Это помогает избежать повторения длинных строк и упрощает изменение в одном месте.
+# ===================================================================================
+env:
+  IMAGE_NAME: ghcr.io/shemah77/tables_booking_system_team1
 
 jobs:
+  # --- ЗАДАЧА 1: Сборка и загрузка Docker-образа в Registry ---
+  build:
+    # Название задачи, отображаемое в интерфейсе
+    name: Build and Push Docker Image
+    # Запускаем на стандартной виртуальной машине GitHub
+    runs-on: ubuntu-latest
+    # Даем задаче права на чтение репозитория и запись в GitHub Packages (Container Registry)
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # Шаг 1.1: Клонируем код репозитория, чтобы иметь доступ к Dockerfile и исходникам
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Шаг 1.2: Логинимся в GitHub Container Registry (ghcr.io)
+      # Используем ваш личный логин и Personal Access Token (PAT) из секретов
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.DOCKER_USERNAME }} # Ваш ник на GitHub
+          password: ${{ secrets.DOCKER_PASSWORD }}      # Ваш PAT с правом write:packages
+
+      # Шаг 1.3: Собираем Docker-образ и загружаем его в registry
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          # Контекст сборки - корень репозитория, где лежит Dockerfile
+          context: .
+          # Говорим, что образ нужно загрузить (push) после сборки
+          push: true
+          # Присваиваем образу два тега:
+          # 1. Уникальный тег с SHA-хэшем коммита (для истории версий)
+          # 2. Тег 'latest' (для простоты деплоя последней версии)
+          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}, ${{ env.IMAGE_NAME }}:latest
+
+  # --- ЗАДАЧА 2: Деплой образа на продакшн-сервер ---
   deploy:
+    name: Deploy to Server
+    # Эта задача будет ждать успешного завершения задачи 'build'
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
-      # Шаг 1: Клонируем репозиторий, чтобы иметь доступ к docker-compose.yml и другим файлам,
-      # если они понадобятся для сборки.
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # Шаг 2: Устанавливаем SSH-ключ для доступа к серверу
+      # Шаг 2.1: Устанавливаем приватный SSH-ключ для доступа к серверу
       - name: Install SSH Key
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.SSH_KEY }}
-          name: id_rsa
+          name: id_rsa # стандартное имя для ключа
           known_hosts: 'just-a-placeholder'
 
-      # Шаг 3: Добавляем IP-адрес сервера в known_hosts для неинтерактивного подключения
+      # Шаг 2.2: Добавляем отпечаток хоста сервера в known_hosts, чтобы избежать интерактивного подтверждения
       - name: Add server to known_hosts
         run: ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      # Шаг 4: Деплой на сервер по SSH
+      # Шаг 2.3: Подключаемся к серверу по SSH и выполняем команды деплоя
       - name: Deploy to Server
         run: |
-          # Подключаемся к серверу и выполняем последовательность команд
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            # Переходим в папку для деплоя
+            # Прерываем выполнение скрипта при первой же ошибке
+            set -e
+
+            # Переходим в папку проекта на сервере
             cd ${{ secrets.PROJECT_PATH }}
 
-            echo ">>> 1. Pulling latest code from main branch..."
-            # Убедимся, что мы на нужной ветке!
-            git checkout feature/CICD 
-            git pull origin feature/CICD
-
-            echo ">>> 2. Creating .env.prod file from GitHub Secrets..."
-            # Безопасно создаем файл с переменными окружения
+            echo ">>> 1. Creating .env.prod file..."
+            # Безопасно создаем файл с переменными окружения из секрета GitHub
             echo "${{ secrets.ENV_PROD_VARS }}" > .env.prod
 
-            echo ">>> 3. Starting services with Docker Compose..."
-            # Запускаем docker-compose. Он пересоздаст только измененные сервисы.
-            # --build: пересобирает образ, если Dockerfile или код изменились.
-            docker-compose up -d --build
+            echo ">>> 2. Pulling the latest Docker image from GHCR..."
+            # Скачиваем с тегом 'latest' из вашего личного registry
+            docker pull ${{ env.IMAGE_NAME }}:latest
 
-            # Небольшая пауза, чтобы база данных успела полностью инициализироваться.
+            echo ">>> 3. Restarting services with the new image..."
+            # Docker Compose автоматически найдет обновленный образ по имени и тегу,
+            # и пересоздаст только те контейнеры, которые его используют.
+            docker compose up -d
+
             echo ">>> Waiting 15 seconds for services to stabilize..."
             sleep 15
-
+            
             echo ">>> 4. Applying database migrations..."
-            # Замените 'web' на имя вашего сервиса с API, если оно другое (например, 'api')
-            docker-compose exec web alembic upgrade head
-
+            # Замените 'web' на имя вашего сервиса, если оно другое (например, 'api')
+            docker compose exec web alembic upgrade head
+            
             echo ">>> 5. Creating superuser (if not exists)..."
-            docker-compose exec web python -m src/core/create_superuser.py
+            docker compose exec web python -m src/core/create_superuser.py
 
             echo ">>> 6. Cleaning up old Docker images..."
+            # Удаляем старые, неиспользуемые образы, чтобы освободить место
             docker image prune -f
 
-            echo "✅ Deployment to ${{ secrets.SSH_HOST }} successful!"
+            echo "✅ Deployment successful!"
+          EOF
