@@ -112,7 +112,7 @@ jobs:
             
           
             echo ">>> 5. Creating superuser (if not exists)"
-            docker compose exec -T web python src/core/create_superuser.py
+            docker compose exec -T web python src/core/create_superuser.py || true
             
             echo ">>> 6. Cleaning up old Docker images..."
             # Удаляем старые, неиспользуемые образы, чтобы освободить место
