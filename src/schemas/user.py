@@ -6,7 +6,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from src.core.types import PhoneNumber
+from src.core.custom_types import PhoneNumber
 
 
 # Короткая версия для отдачи наружу

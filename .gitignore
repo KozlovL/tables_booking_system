@@ -133,3 +133,4 @@ dmypy.json
 /media
 *.db
 pgdata
+.env_prod
