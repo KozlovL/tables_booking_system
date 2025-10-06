@@ -3,7 +3,7 @@ from http import HTTPStatus
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps.access import is_admin_or_manager, check_admin_or_manager
+from src.api.deps.access import can_view_inactive, require_manager_or_admin
 from src.api.validators import (
     check_dish_name_duplicate,
     get_dish_or_404, get_cafe_or_404,
@@ -18,7 +18,7 @@ router = APIRouter(prefix='/dishes', tags=['Блюдо'])
 
 
 @router.get(
-    '/',
+    '',
     response_model=list[Dish],
     response_model_exclude_none=True,
     summary='Получение списка всех блюд',
@@ -29,33 +29,24 @@ async def get_all_dishes(
         cafe_id: int | None = None,
         current_user: User = Depends(get_current_user)
 ):
-    # Список фильтров для запроса
-    query_kwargs = {}
-    # Если передали cafe_id, проверяем существование и добавляем фильтр
+    cafe = None
     if cafe_id is not None:
         cafe = await get_cafe_or_404(cafe_id=cafe_id, session=session)
-        query_kwargs['cafe'] = cafe
-    else:
-        cafe = None
-    # Если параметр show_all не был передан или пользователь не является
-    # админом или менеджером кафе, то добавляем фильтр active=True
-    if show_all is not True or not is_admin_or_manager(
-        cafe=cafe,
-        current_user=current_user,
-    ):
-        query_kwargs['active'] = True
 
-    return await dish_crud.get_by_field(
+    has_permission_for_inactive = can_view_inactive(cafe_id, current_user)
+
+    active_only = not (show_all is True and has_permission_for_inactive)
+
+    return await dish_crud.get_dishes_with_access_control(
         session=session,
-        many=True,
-        # Подгружаем данные
-        extra_uploading=True,
-        **query_kwargs,
+        cafe=cafe,
+        active_only=active_only,
+        current_user=current_user,
     )
 
 
 @router.post(
-    '/',
+    '',
     response_model=Dish,
     response_model_exclude_none=True,
     summary='Создание блюда'
@@ -69,9 +60,9 @@ async def create_dish(
         session=session,
         cafe_id=dish.cafe_id,
     )
-    await check_admin_or_manager(
-        cafe=cafe,
-        current_user=current_user,
+    require_manager_or_admin(
+        cafe_id=dish.cafe_id,
+        current_user=current_user
     )
     await check_dish_name_duplicate(
         dish_name=dish.name,
@@ -98,10 +89,10 @@ async def get_dish_by_id(
         session=session,
         extra_uploading=True
     )
-    cafe = await get_cafe_or_404(cafe_id=dish.cafe_id, session=session)
-    if is_admin_or_manager(
-        cafe=cafe,
-        current_user=current_user,
+    await get_cafe_or_404(cafe_id=dish.cafe_id, session=session)
+    if can_view_inactive(
+        cafe_id=dish.cafe_id,
+        current_user=current_user
     ) or dish.active is True:
         return dish
     raise HTTPException(
@@ -127,9 +118,9 @@ async def update_dish(
         cafe_id=current_dish.cafe_id,
         session=session
     )
-    await check_admin_or_manager(
-        cafe=cafe,
-        current_user=current_user,
+    require_manager_or_admin(
+        cafe_id=current_dish.cafe_id,
+        current_user=current_user
     )
     new_cafe_id = new_dish.cafe_id
     # Если передали кафе и оно не совпадает с текущим
