@@ -10,3 +10,9 @@ from .user import (  # noqa
     UserShort,
     UserUpdate,
 )
+from .slot import(
+    TimeSlotRead,
+    TimeSlotCreate,
+    TimeSlotUpdate,
+    TimeSlotShort
+)

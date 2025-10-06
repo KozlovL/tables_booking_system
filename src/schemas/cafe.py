@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.core.types import PhoneNumber
 from src.schemas.user import UserShort
@@ -37,13 +37,12 @@ class CafeRead(BaseModel):
 
 
 class CafeUpdate(BaseModel):
-    """Схема для обновления данных кафе."""
-
+    """Схема обновления Кафе"""
     name: Optional[str] = Field(None, min_length=1, max_length=128)
     address: Optional[str] = Field(None, min_length=1, max_length=255)
-    phone: Optional[str] = None  # можно добавить regex
+    phone: Optional[PhoneNumber] = None          # у тебя может быть regex
     description: Optional[str] = None
-    photo: Optional[str] = None  # base64 или None (стереть)
+    photo: Optional[str] = None
     managers: Optional[List[int]] = None
     active: Optional[bool] = None
     model_config = ConfigDict(from_attributes=True)

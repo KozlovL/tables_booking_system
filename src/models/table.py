@@ -2,7 +2,8 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
+from sqlalchemy import String, ForeignKey, CheckConstraint
+from src.core.db import Base
 from src.core.db import ActiveMixin, Base, TimestampMixin
 
 if TYPE_CHECKING:

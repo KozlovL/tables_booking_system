@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 from src.core.auth import get_current_user, require_admin
 from src.core.db import get_async_session
 from src.core.logger import log_request, logger
-from src.crud.cafe import cafe_crud
+from src.crud.cafe import cafe_crud, ManagersNotFoundError
 from src.models.cafe import Cafe as CafeModel
 from src.models.user import User
 from src.schemas.cafe import CafeCreate, CafeRead, CafeUpdate
@@ -139,8 +139,7 @@ async def update_cafe(
         current_user: User = Depends(require_admin),
 ) -> CafeRead:
     """Обновление кафе по ID (только для администратора)."""
-    cafe = await cafe_crud.get(cafe_id, session)
-
+    cafe = await cafe_crud.get_with_managers(cafe_id, session)
     if not cafe:
         raise HTTPException(404, 'Cafe not found')
 
@@ -151,7 +150,10 @@ async def update_cafe(
     if 'photo' in update_data and update_data['photo']:
         photo_url = update_data['photo']
 
-    cafe = await cafe_crud.update_with_managers(
+
+
+    try:
+        cafe = await cafe_crud.update_with_managers(
         cafe,
         payload,
         session,
@@ -164,4 +166,9 @@ async def update_cafe(
         user_id=current_user.id,
         details={'cafe_id': cafe.id},
     )
+        )
+    except ManagersNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=str(e)
+                            )
     return cafe

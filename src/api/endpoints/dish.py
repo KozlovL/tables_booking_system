@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps.access import check_admin_or_manager, is_admin_or_manager
+from src.api.deps.access import can_view_inactive, require_manager_or_admin
 from src.api.validators import (
     check_dish_name_duplicate,
     get_cafe_or_404,
@@ -27,29 +27,25 @@ router = APIRouter(prefix='/dishes', tags=['Блюдо'])
             'пользователь - только активные)',
 )
 async def get_all_dishes(
-    session: AsyncSession = Depends(get_async_session),
-    show_all: bool | None = None,
-    cafe_id: int | None = None,
-    current_user: User = Depends(get_current_user),
+        session: AsyncSession = Depends(get_async_session),
+        show_all: bool | None = None,
+        cafe_id: int | None = None,
+        current_user: User = Depends(get_current_user)
 ) -> list[Dish]:
     """Список всех блюд с фильтром по активности."""
-    query_kwargs = {}
     cafe = None
     if cafe_id is not None:
         cafe = await get_cafe_or_404(cafe_id=cafe_id, session=session)
-        query_kwargs['cafe'] = cafe
 
-    if show_all is not True or not await is_admin_or_manager(
-        cafe=cafe,
-        current_user=current_user,
-    ):
-        query_kwargs['active'] = True
+    has_permission_for_inactive = can_view_inactive(cafe_id, current_user)
 
-    dishes = await dish_crud.get_by_field(
+    active_only = not (show_all is True and has_permission_for_inactive)
+
+    return await dish_crud.get_dishes_with_access_control(
         session=session,
-        many=True,
-        extra_uploading=True,
-        **query_kwargs,
+        cafe=cafe,
+        active_only=active_only,
+        current_user=current_user,
     )
 
     logger.info(
@@ -69,13 +65,19 @@ async def get_all_dishes(
     summary='Создание блюда (только для администратора и менеджера)',
 )
 async def create_dish(
-    dish: DishCreate,
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_async_session),
+        dish: DishCreate,
+        current_user: User = Depends(get_current_user),
+        session: AsyncSession = Depends(get_async_session),
 ) -> Dish:
     """Создание нового блюда (только для админа/менеджера)."""
-    cafe = await get_cafe_or_404(session=session, cafe_id=dish.cafe_id)
-    await check_admin_or_manager(cafe=cafe, current_user=current_user)
+    cafe = await get_cafe_or_404(
+        session=session,
+        cafe_id=dish.cafe_id,
+    )
+    require_manager_or_admin(
+        cafe_id=dish.cafe_id,
+        current_user=current_user
+    )
     await check_dish_name_duplicate(
         dish_name=dish.name,
         cafe=cafe,
@@ -117,12 +119,11 @@ async def get_dish_by_id(
         session=session,
         extra_uploading=True,
     )
-    cafe = await get_cafe_or_404(cafe_id=dish.cafe_id, session=session)
-
-    if (
-        await is_admin_or_manager(cafe=cafe, current_user=current_user)
-        or dish.active
-    ):
+    await get_cafe_or_404(cafe_id=dish.cafe_id, session=session)
+    if can_view_inactive(
+        cafe_id=dish.cafe_id,
+        current_user=current_user
+    ) or dish.active is True:
         logger.info(
             'Получено блюдо',
             username=current_user.username,
@@ -158,9 +159,14 @@ async def update_dish(
 ) -> Dish:
     """Обновление блюда (только для админа/менеджера)."""
     current_dish = await get_dish_or_404(dish_id, session)
-    cafe = await get_cafe_or_404(cafe_id=current_dish.cafe_id, session=session)
-    await check_admin_or_manager(cafe=cafe, current_user=current_user)
-
+    cafe = await get_cafe_or_404(
+        cafe_id=current_dish.cafe_id,
+        session=session
+    )
+    require_manager_or_admin(
+        cafe_id=current_dish.cafe_id,
+        current_user=current_user
+    )
     new_cafe_id = new_dish.cafe_id
     if new_cafe_id is not None and new_cafe_id != cafe.id:
         cafe = await get_cafe_or_404(cafe_id=new_cafe_id, session=session)

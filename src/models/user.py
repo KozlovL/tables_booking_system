@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from functools import cached_property
 
 from src.core.db import ActiveMixin, Base, TimestampMixin
 from src.models.cafe import cafe_managers_table
@@ -65,3 +66,7 @@ class User(Base, TimestampMixin, ActiveMixin):
             f'User(username={self.username}, '
             f'phone={self.phone}, is_superuser={self.is_superuser}) '
         )
+
+    @cached_property
+    def managed_cafe_ids(self) -> set[int]:
+        return {cafe.id for cafe in self.managed_cafes}

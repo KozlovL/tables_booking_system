@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_include_inactive, require_manager_or_admin
+from src.api.deps import can_view_inactive, require_manager_or_admin
 from src.api.validators import cafe_exists, get_table_or_404
+from src.core.db import get_async_session
 from src.core.auth import get_current_user
 from src.core.db import get_async_session
 from src.core.logger import log_request, logger
@@ -26,12 +27,17 @@ async def get_tables_in_cafe(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> list[Table]:
-    """Список столов в кафе с фильтром активности."""
+    """
+    Возвращает список столов в указанном кафе.
+
+    Права доступа:
+    - Все авторизованные пользователи могут просматривать активные столы/кафе.
+    - Менеджеры кафе и администраторы видят также неактивные столы/кафе.
+
+    """
     await cafe_exists(cafe_id, session)
-    include_inactive = await get_include_inactive(
-        cafe_id,
-        current_user,
-        session,
+    include_inactive = can_view_inactive(
+        cafe_id, current_user
     )
     tables = await table_crud.get_multi_by_cafe(
         session,
@@ -61,9 +67,14 @@ async def create_table(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> Table:
-    """Создание нового стола (только для менеджера/админа)."""
+    """
+    Создает стол в указаном кафе.
+
+    Права доступа:
+    - Менеджер кафе или администратор.
+    """
     await cafe_exists(cafe_id, session)
-    await require_manager_or_admin(cafe_id, current_user, session)
+    require_manager_or_admin(cafe_id, current_user)
     table = await table_crud.create(session, cafe_id, table_in)
 
     logger.info(
@@ -89,12 +100,16 @@ async def get_table_by_id(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> Table:
-    """Возвращает стол по ID с проверкой прав доступа."""
+    """
+    Возвращает стол в указаном кафе по ID
+
+    Права доступа:
+    - Все авторизованные пользователи могут просматривать активный стол/кафе.
+    - Менеджеры кафе и администраторы видят также неактивный стол/кафе.
+    """
     await cafe_exists(cafe_id, session)
-    include_inactive = await get_include_inactive(
-        cafe_id,
-        current_user,
-        session,
+    include_inactive = can_view_inactive(
+        cafe_id, current_user
     )
     table = await get_table_or_404(
         session,
@@ -125,9 +140,14 @@ async def update_table(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> Table:
-    """Обновление данных стола (только менеджер/админ)."""
+    """
+    Изменяет стол в указаном кафе
+
+    Права доступа:
+    - Менеджер кафе или администратор.
+    """
     await cafe_exists(cafe_id, session)
-    await require_manager_or_admin(cafe_id, current_user, session)
+    require_manager_or_admin(cafe_id, current_user)
     table = await get_table_or_404(
         session,
         table_id,
