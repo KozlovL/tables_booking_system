@@ -150,23 +150,21 @@ async def update_cafe(
     if 'photo' in update_data and update_data['photo']:
         photo_url = update_data['photo']
 
-
-
     try:
         cafe = await cafe_crud.update_with_managers(
-        cafe,
-        payload,
-        session,
-        photo_url=photo_url,
-    )
-
-    logger.info(
-        'Обновлено кафе по ID',
-        username=current_user.username,
-        user_id=current_user.id,
-        details={'cafe_id': cafe.id},
-    )
+            cafe,
+            payload,
+            session,
+            photo_url=photo_url,
         )
+
+        logger.info(
+            'Обновлено кафе по ID',
+            username=current_user.username,
+            user_id=current_user.id,
+            details={'cafe_id': cafe.id},
+        )
+
     except ManagersNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=str(e)
