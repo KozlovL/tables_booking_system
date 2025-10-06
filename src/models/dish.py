@@ -28,6 +28,12 @@ class Dish(Base, TimestampMixin, ActiveMixin):
     price: Mapped[int] = mapped_column(Integer, nullable=False)
     description: Mapped[str] = mapped_column(Text)
     photo: Mapped[str | None] = mapped_column(Text)
+    bookings: Mapped[list['BookingModel']] = relationship(
+        'BookingModel',
+        secondary='booking_dishes',
+        back_populates='menu',
+        lazy='selectin'
+    )
 
     __table_args__ = (
         UniqueConstraint(

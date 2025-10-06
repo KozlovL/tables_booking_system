@@ -29,7 +29,13 @@ class TableModel(Base, TimestampMixin, ActiveMixin):
     cafe: Mapped['Cafe'] = relationship(
         'Cafe',
         back_populates='tables',
-        lazy='selectin',
+        lazy='selectin'
+        )
+    bookings: Mapped[list['BookingModel']] = relationship(
+        'BookingModel',
+        secondary='booking_tables',
+        back_populates='tables',
+        lazy='selectin'
     )
 
     __table_args__ = (

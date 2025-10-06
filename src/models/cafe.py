@@ -46,8 +46,8 @@ class Cafe(Base, TimestampMixin, ActiveMixin):
     managers: Mapped[list['User']] = relationship(
         'User',
         secondary=cafe_managers_table,
-        back_populates='managed_cafes',
-        lazy='selectin',
+        back_populates="managed_cafes",
+        lazy='joined',
     )
 
     dishes: Mapped[list['Dish']] = relationship(
@@ -62,3 +62,8 @@ class Cafe(Base, TimestampMixin, ActiveMixin):
     )
     time_slots = relationship('TimeSlot', back_populates='cafe',
                               lazy='selectin')
+    bookings: Mapped[list['BookingModel']] = relationship(
+        'BookingModel',
+        back_populates='cafe',
+        lazy='selectin'
+    )

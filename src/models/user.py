@@ -61,6 +61,12 @@ class User(Base, TimestampMixin, ActiveMixin):
         lazy='selectin',
     )
 
+    bookings: Mapped[list['BookingModel']] = relationship(
+        'BookingModel',
+        back_populates='user',
+        lazy='selectin'
+    )
+
     def __repr__(self) -> str:
         return (
             f'User(username={self.username}, '
