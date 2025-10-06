@@ -69,7 +69,7 @@ jobs:
         with:
           key: ${{ secrets.SSH_KEY }}
           name: id_rsa # стандартное имя для ключа
-          known_hosts: 'just-a-placeholder'
+          known_hosts: '51.250.40.11 '
 
       # Шаг 2.2: Добавляем отпечаток хоста сервера в known_hosts, чтобы избежать интерактивного подтверждения
       - name: Add server to known_hosts
@@ -108,8 +108,6 @@ jobs:
             else
                 echo "Warning: Alembic command finished with a non-zero exit code. Continuing deployment..."
             fi
-          
-            
           
             echo ">>> 5. Creating superuser (if not exists)"
             docker compose exec -T web python src/core/create_superuser.py || true
