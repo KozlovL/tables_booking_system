@@ -16,7 +16,7 @@ class ActionBase(BaseModel):
 class ActionCreate(ActionBase):
     """Схема для создания новой акции."""
 
-    cafe_id: int
+    cafe_id: PositiveInt
 
 
 class ActionUpdate(ActionBase):

@@ -3,10 +3,10 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_include_inactive, require_manager_or_admin
+from src.api.deps import can_view_inactive, require_manager_or_admin
 from src.api.validators import (
+    cafe_exists,
     get_action_or_404,
-    get_cafe_or_404,
 )
 from src.core.auth import get_current_user
 from src.core.db import get_async_session
@@ -32,7 +32,7 @@ async def get_actions(
 ) -> List[ActionWithCafe]:
     """Получение списка акций."""
     if cafe_id:
-        await get_cafe_or_404(cafe_id, session)
+        await cafe_exists(cafe_id, session)
 
     if not current_user.is_superuser and not current_user.managed_cafes:
         if show_all:
@@ -43,12 +43,11 @@ async def get_actions(
         include_inactive = False
         cafe_ids = None
     else:
-        check_cafe_id = cafe_id or (
-            current_user.managed_cafes[0].id
-            if current_user.managed_cafes else 1
-        )
-        include_inactive = await get_include_inactive(
-            check_cafe_id, current_user, session)
+        check_cafe_id = cafe_id
+        if not check_cafe_id and current_user.managed_cafes:
+            check_cafe_id = current_user.managed_cafes[0].id
+
+        include_inactive = can_view_inactive(check_cafe_id, current_user)
 
         cafe_ids = None
         if current_user.managed_cafes and not current_user.is_superuser:
@@ -74,8 +73,8 @@ async def create_action(
         session: AsyncSession = Depends(get_async_session),
 ) -> ActionWithCafe:
     """Создание акции."""
-    await get_cafe_or_404(action.cafe_id, session)
-    await require_manager_or_admin(action.cafe_id, current_user, session)
+    await cafe_exists(action.cafe_id, session)
+    require_manager_or_admin(action.cafe_id, current_user)
     return await action_crud.create(session, action)
 
 
@@ -93,10 +92,7 @@ async def get_action(
 ) -> ActionWithCafe:
     """Получение акции по ID."""
     action_obj = await get_action_or_404(action_id, session)
-
-    include_inactive = await get_include_inactive(action_obj.cafe_id,
-                                                  current_user, session)
-
+    include_inactive = can_view_inactive(action_obj.cafe_id, current_user)
     if not include_inactive and not action_obj.active:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -119,11 +115,11 @@ async def update_action(
 ) -> ActionWithCafe:
     """Обновление акции по ID."""
     action_obj = await get_action_or_404(action_id, session)
-    await require_manager_or_admin(action_obj.cafe_id, current_user, session)
+    require_manager_or_admin(action_obj.cafe_id, current_user)
 
-    if action_update.cafe_id and action_update.cafe_id != action_obj.cafe_id:
-        await get_cafe_or_404(action_update.cafe_id, session)
-        await require_manager_or_admin(action_update.cafe_id, current_user,
-                                       session)
+    if (action_update.cafe_id is not None and
+            action_update.cafe_id != action_obj.cafe_id):
+        await cafe_exists(action_update.cafe_id, session)
+        require_manager_or_admin(action_update.cafe_id, current_user)
 
     return await action_crud.update(session, action_obj, action_update)
