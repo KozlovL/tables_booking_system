@@ -1,10 +1,12 @@
-# src/crud/user.py
 from __future__ import annotations
+
+from typing import Any, Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.logger import logger
 from src.core.security import get_password_hash
 from src.crud.base import CRUDBase
 from src.models.user import User
@@ -12,12 +14,7 @@ from src.schemas.user import UserCreate
 
 
 class CRUDUser(CRUDBase):
-    """CRUD из CRUDBase, но create делает:
-    - нормализацию username/phone/email/tg_id
-    - проверку уникальности (username, phone — всегда; email/tg_id — если заданы)
-    - хэширование пароля -> hashed_password
-    - единые дефолты для active/is_superuser/is_verified
-    """
+    """CRUD из CRUDBase с логикой для пользователей."""
 
     model: type[User]
 
@@ -27,20 +24,24 @@ class CRUDUser(CRUDBase):
         session: AsyncSession,
         *,
         exclude_fields: set[str] | None = None,
-        **extra_fields,
+        **extra_fields: Any,
     ) -> User:
-        # 1) нормализация входных полей
+        """Создаёт пользователя."""
         username = obj_in.username.strip()
         phone = obj_in.phone.strip()
-        email = obj_in.email.lower().strip() if getattr(obj_in, "email", None) else None
-        tg_id = obj_in.tg_id.strip() if getattr(obj_in, "tg_id", None) else None
+        email = obj_in.email.lower().strip() if obj_in.email else None
+        tg_id = obj_in.tg_id.strip() if obj_in.tg_id else None
 
         if not username:
-            raise HTTPException(status_code=400, detail="Username cannot be empty")
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, 'Username cannot be empty',
+            )
         if not phone:
-            raise HTTPException(status_code=400, detail="Phone cannot be empty")
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, 'Phone cannot be empty',
+            )
 
-        # 2) проверки уникальности
+        # проверка уникальности
         conditions = [User.username == username, User.phone == phone]
         if email:
             conditions.append(User.email == email)
@@ -49,41 +50,52 @@ class CRUDUser(CRUDBase):
 
         res = await session.execute(select(User.id).where(or_(*conditions)))
         if res.scalar_one_or_none() is not None:
+            logger.warning(
+                'Попытка создания дубликата пользователя, совпадение полей: '
+                f'{username}/{phone}/{email}/{tg_id}',
+            )
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User with same username/phone/email/tg_id already exists",
+                status.HTTP_400_BAD_REQUEST,
+                'User with same username/phone/email/tg_id already exists',
             )
 
-        # 3) собираем данные для модели
         data = {
-            "username": username,
-            "phone": phone,
-            "email": email,
-            "tg_id": tg_id,
-            "hashed_password": get_password_hash(obj_in.password),
-            "active": True,          # единая логика — активен по умолчанию
-            "is_superuser": False,
-            "is_verified": False,
+            'username': username,
+            'phone': phone,
+            'email': email,
+            'tg_id': tg_id,
+            'hashed_password': get_password_hash(obj_in.password),
+            'active': True,
+            'is_superuser': False,
+            'is_verified': False,
         }
         if extra_fields:
             data.update(extra_fields)
 
-        # 4) создаём объект как в базовом CRUD (но без пароля в явном виде)
         db_obj = self.model(**data)
         session.add(db_obj)
-        await session.flush()  # получим id
+        await session.flush()
+        logger.info(
+            'Создан пользователь: '
+            f'{username}/{phone}/{email}/{tg_id} id={db_obj.id}',
+        )
         return db_obj
 
-    async def get_by_fields(self, session, **fields):
+    async def get_by_fields(
+        self,
+        session: AsyncSession,
+        **fields: Any,
+    ) -> Optional[User]:
+        """Возвращает пользователя по полям или None."""
         conditions = []
-        if fields.get("username"):
-            conditions.append(User.username == fields["username"])
-        if fields.get("phone"):
-            conditions.append(User.phone == fields["phone"])
-        if fields.get("email"):
-            conditions.append(User.email == fields["email"])
-        if fields.get("tg_id"):
-            conditions.append(User.tg_id == fields["tg_id"])
+        if fields.get('username'):
+            conditions.append(User.username == fields['username'])
+        if fields.get('phone'):
+            conditions.append(User.phone == fields['phone'])
+        if fields.get('email'):
+            conditions.append(User.email == fields['email'])
+        if fields.get('tg_id'):
+            conditions.append(User.tg_id == fields['tg_id'])
 
         if not conditions:
             return None
