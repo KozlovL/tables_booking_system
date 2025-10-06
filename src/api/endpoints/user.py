@@ -8,7 +8,8 @@ from src.core.logger import log_request, logger
 from src.core.security import get_password_hash
 from src.crud.user import user_crud
 from src.models.user import User
-from src.schemas.user import UserCreate, UserRead, UserUpdate, UserShort
+from src.schemas.user import (UserCreate, UserRead, UserUpdate, UserShort,
+                              UserUpdateByAdmin)
 from src.api.validators import check_unique_fields
 from src.core.exceptions import (ResourceNotFoundError,
                                  DuplicateError
@@ -126,10 +127,10 @@ async def update_me(
 )
 async def update_user(
     user_id: int,
-    payload: UserUpdate,
+    payload: UserUpdateByAdmin,
     session: AsyncSession = Depends(get_async_session),
     current_admin: UserShort = Depends(require_admin),
-) -> UserUpdate:
+) -> UserUpdateByAdmin:
     """Обновление данных пользователя админом."""
     db_user = await user_crud.get(user_id, session)
     if not db_user:
@@ -145,11 +146,6 @@ async def update_user(
         )
 
     update_data = payload.dict(exclude_unset=True)
-    if 'password' in update_data:
-        update_data['hashed_password'] = get_password_hash(
-            update_data.pop('password'),
-        )
-
     unique_fields = {'username', 'email', 'phone', 'tg_id'}
     fields_to_check = {
         key: value
@@ -222,7 +218,7 @@ async def list_users(
     current_user: User = Depends(get_current_user),
 ) -> list[UserRead]:
     # если пользователь не админ → всегда только активные
-    """Получение списка пользователей, олько для администратора"""
+    """Получение списка пользователей, только для администратора"""
     only_active = True
     if current_user.is_superuser:
         only_active = not show_all

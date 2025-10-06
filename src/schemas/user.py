@@ -65,3 +65,26 @@ class UserUpdate(BaseModel):
         if isinstance(value, str) and len(value) == 0:
             raise ValueError("не может быть пустой строкой")
         return value
+
+class UserUpdateByAdmin(BaseModel):
+    """Схема админ меняет данные пользователя."""
+
+    username: str | None = Field(default=None, min_length=3, max_length=128)
+    email: EmailStr | None = None
+    phone: PhoneNumber | None = None
+    tg_id: str | None = None
+    # password: str | None = None
+    active: bool | None = None
+
+    model_config = ConfigDict(extra='forbid')
+
+    @field_validator('username',  'tg_id', 'phone', mode='before')
+    @classmethod
+    def prevent_empty_str(cls, value: Any) -> Any | None:
+        """
+        Универсальный валидатор, который не позволяет передавать пустые строки
+        для текстовых полей.
+        """
+        if isinstance(value, str) and len(value) == 0:
+            raise ValueError("не может быть пустой строкой")
+        return value
