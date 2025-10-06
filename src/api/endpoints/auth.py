@@ -11,12 +11,12 @@ from src.models.user import User
 from src.schemas.auth import LoginRequest, TokenResponse
 from src.schemas.user import UserRead
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix='/auth', tags=['auth'])
 
 
 @log_request()
 @router.post(
-    "/login",
+    '/login',
     response_model=TokenResponse,
     summary='Аутентификация пользователя',
     )
@@ -26,7 +26,7 @@ async def login(
 ) -> TokenResponse:
     """Вход пользователя и выдача токена."""
     identifier: str = payload.name.strip()
-    if "@" in identifier:
+    if '@' in identifier:
         lookup = select(User).where(User.email == identifier.lower())
     else:
         lookup = select(User).where(User.phone == identifier)
@@ -36,33 +36,33 @@ async def login(
 
     if not user or not user.active:
         logger.warning(
-            "Неудачная попытка входа",
-            details={"identifier": identifier},
+            'Неудачная попытка входа',
+            details={'identifier': identifier},
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверные учетные данные",
+            detail='Неверные учетные данные',
         )
 
     if not verify_password(payload.password, user.hashed_password):
         logger.warning(
-            "Неверный пароль",
+            'Неверный пароль',
             username=user.username,
             user_id=user.id,
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверные учетные данные",
+            detail='Неверные учетные данные',
         )
 
     token: str = create_access_token(subject=user.id)
-    logger.info("Успешный вход", username=user.username, user_id=user.id)
+    logger.info('Успешный вход', username=user.username, user_id=user.id)
     return TokenResponse(access_token=token)
 
 
 @log_request()
 @router.post(
-    "/logout",
+    '/logout',
     response_model=UserRead,
     status_code=status.HTTP_200_OK,
     summary='Выход из аккаунта',
@@ -72,13 +72,13 @@ async def logout(
 ) -> JSONResponse:
     """Выход пользователя."""
     logger.info(
-        "Выход пользователя",
+        'Выход пользователя',
         username=current_user.username,
         user_id=current_user.id,
     )
     return JSONResponse(
         content={
-            "message": f"Пользователь {current_user.username} успешно вышел",
+            'message': f'Пользователь {current_user.username} успешно вышел',
         },
         status_code=status.HTTP_200_OK,
     )

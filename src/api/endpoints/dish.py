@@ -19,7 +19,7 @@ router = APIRouter(prefix='/dishes', tags=['Блюдо'])
 
 @log_request()
 @router.get(
-    '/',
+    '',
     response_model=list[Dish],
     response_model_exclude_none=True,
     summary='Получение списка блюд '
@@ -39,7 +39,7 @@ async def get_all_dishes(
         cafe = await get_cafe_or_404(cafe_id=cafe_id, session=session)
         query_kwargs['cafe'] = cafe
 
-    if show_all is not True or not is_admin_or_manager(
+    if show_all is not True or not await is_admin_or_manager(
         cafe=cafe,
         current_user=current_user,
     ):
@@ -63,7 +63,7 @@ async def get_all_dishes(
 
 @log_request()
 @router.post(
-    '/',
+    '',
     response_model=Dish,
     response_model_exclude_none=True,
     summary='Создание блюда (только для администратора и менеджера)',
@@ -120,7 +120,7 @@ async def get_dish_by_id(
     cafe = await get_cafe_or_404(cafe_id=dish.cafe_id, session=session)
 
     if (
-        is_admin_or_manager(cafe=cafe, current_user=current_user)
+        await is_admin_or_manager(cafe=cafe, current_user=current_user)
         or dish.active
     ):
         logger.info(

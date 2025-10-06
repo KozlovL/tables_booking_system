@@ -11,12 +11,12 @@ from src.models.cafe import Cafe as CafeModel
 from src.models.user import User
 from src.schemas.cafe import CafeCreate, CafeRead, CafeUpdate
 
-router = APIRouter(prefix="/cafes", tags=["Кафе"])
+router = APIRouter(prefix='/cafes', tags=["Кафе"])
 
 
 @log_request()
 @router.post(
-    "",
+    '',
     response_model=CafeRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_admin)],
@@ -126,7 +126,7 @@ async def get_cafe(
 
 @log_request()
 @router.patch(
-    "/{cafe_id}",
+    '/{cafe_id}',
     response_model=CafeRead,
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_admin)],

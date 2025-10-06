@@ -1,6 +1,3 @@
-from typing import TYPE_CHECKING, Optional
-
-from pydantic import BaseModel
 from sqlalchemy import (
     CheckConstraint,
     ForeignKey,
@@ -12,13 +9,11 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.db import ActiveMixin, Base, TimestampMixin
-
-if TYPE_CHECKING:
-    from src.models.cafe import Cafe
+from src.models.cafe import Cafe
 
 
 class Dish(Base, TimestampMixin, ActiveMixin):
-    """Модель блюда с ссылкой на кафе и уникальным названием."""
+    """Модель блюда."""
 
     cafe_id: Mapped[int] = mapped_column(
         ForeignKey('cafe.id', name='fk_dish_cafe_id'),
@@ -38,32 +33,12 @@ class Dish(Base, TimestampMixin, ActiveMixin):
         UniqueConstraint(
             'cafe_id',
             'name',
-            name='uc_dish_cafe_id_name_unique',
-        ),
+            name='uc_dish_cafe_id_name_unique'),
     )
 
     def __repr__(self) -> str:
         return (
-            f'Dish(name={self.name}, price={self.price}, '
-            f'description={self.description[:30]!r})'
+            f'Название блюда - {self.name}. '
+            f'Цена блюда - {self.price}. '
+            f'Описание блюда - {self.description[:30]}. '
         )
-
-    #   ДОПИСАТЬ СОГЛАСНО ДОКУМЕНТАЦИИ!!! ЭТО ЗАГЛУШКИ!!!
-
-    class DishCreate(BaseModel):
-        """Схема создания нового блюда."""
-
-        name: str
-        price: int
-        description: Optional[str] = None
-        photo: Optional[str] = None
-        cafe_id: int
-
-
-class DishUpdate(BaseModel):
-    """Схема обновления существующего блюда."""
-
-    name: Optional[str] = None
-    price: Optional[int] = None
-    description: Optional[str] = None
-    photo: Optional[str] = None
