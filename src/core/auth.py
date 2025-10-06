@@ -4,6 +4,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.core.config import settings
 from src.core.db import get_async_session
@@ -32,7 +33,10 @@ async def get_current_user(
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    res = await session.execute(select(User).where(User.id == int(sub)))
+    res = await session.execute(
+        select(User).where(
+            User.id == int(sub)).options(selectinload(User.managed_cafes))
+    )
     user = res.scalars().one_or_none()
 
     if not user or not user.active:

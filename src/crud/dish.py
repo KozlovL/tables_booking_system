@@ -1,11 +1,11 @@
 from typing import Iterable
 
-from sqlalchemy import select
+from sqlalchemy import select, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.crud.base import CRUDBase
-from src.models import Dish, Cafe
+from src.models import Dish, Cafe, User
 
 
 class CRUDDish(CRUDBase):
@@ -69,6 +69,41 @@ class CRUDDish(CRUDBase):
             .where(self.model.id == db_obj.id)
         )
         return result.scalar_one()
+
+    async def get_dishes_with_access_control(
+        self,
+        session: AsyncSession,
+        cafe: Cafe | None,
+        active_only: bool,
+        current_user: User,
+    ) -> list[Dish]:
+        """Получаем список блюд с фильтрацией доступа"""
+        query = select(Dish).options(
+            selectinload(Dish.cafe).selectinload(Cafe.managers),
+        )
+
+        if cafe is not None:
+            query = query.where(Dish.cafe_id == cafe.id)
+        if active_only:
+            query = query.where(
+                Dish.active.is_(True)
+            )
+        else:
+            if current_user.is_superuser:
+                pass
+            elif current_user.managed_cafe_ids:
+                query = query.where(
+                    or_(
+                        Dish.active.is_(True),
+                        and_(
+                            Dish.active.is_(False),
+                            Dish.cafe_id.in_(current_user.managed_cafe_ids)
+                        )
+                    )
+                )
+
+        result = await session.execute(query)
+        return list(result.scalars().all())
 
 
 dish_crud = CRUDDish(Dish)
