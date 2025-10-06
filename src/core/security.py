@@ -1,4 +1,3 @@
-# src/core/security.py
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
@@ -11,23 +10,22 @@ from src.core.config import settings
 
 
 def get_password_hash(password: str) -> str:
-    """Возвращает bcrypt-хэш (str). rounds управляем через settings.bcrypt_rounds.
-    """
+    """Возвращает bcrypt-хэш строки пароля."""
     salt = bcrypt.gensalt(rounds=settings.bcrypt_rounds)
-    hashed: bytes = bcrypt.hashpw(password.encode("utf-8"), salt)
-    return hashed.decode("utf-8")  # хранить в БД как str
+    hashed: bytes = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Проверяет пароль против сохранённого bcrypt-хэша.
-    """
+    """Проверяет пароль по bcrypt-хэшу."""
     try:
         return bcrypt.checkpw(
-            plain_password.encode("utf-8"),
-            hashed_password.encode("utf-8"),
+            plain_password.encode('utf-8'),
+            hashed_password.encode('utf-8'),
         )
     except Exception:
         return False
+
 
 # ---------- JWT ----------
 
@@ -37,27 +35,30 @@ def create_access_token(
     expires_minutes: Optional[int] = None,
     extra_claims: Optional[dict[str, Any]] = None,
 ) -> str:
+    """Создает JWT-токен с указанным сроком жизни."""
     if expires_minutes is None:
         expires_minutes = settings.access_token_expire_min
 
     now = datetime.now(tz=timezone.utc)
     payload: dict[str, Any] = {
-        "sub": str(subject),
-        "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(
-            minutes=expires_minutes))
-                   .timestamp()),
+        'sub': str(subject),
+        'iat': int(now.timestamp()),
+        'exp': int((now + timedelta(minutes=expires_minutes)).timestamp()),
     }
     if extra_claims:
         payload.update(extra_claims)
 
-    token = jwt.encode(payload, settings.secret,
-                       algorithm=settings.jwt_algorithm,
-                       )
-    return token
+    return jwt.encode(
+        payload,
+        settings.secret,
+        algorithm=settings.jwt_algorithm,
+    )
 
 
 def decode_token(token: str) -> dict[str, Any]:
-    return jwt.decode(token, settings.secret,
-                      algorithms=[settings.jwt_algorithm],
-                      )
+    """Декодирует JWT и возвращает полезную нагрузку."""
+    return jwt.decode(
+        token,
+        settings.secret,
+        algorithms=[settings.jwt_algorithm],
+    )
