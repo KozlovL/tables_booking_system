@@ -94,8 +94,6 @@ jobs:
             docker pull ${{ env.IMAGE_NAME }}:latest
 
             echo ">>> 3. Restarting services with the new image..."
-            # Docker Compose автоматически найдет обновленный образ по имени и тегу,
-            # и пересоздаст только те контейнеры, которые его используют.
             docker compose up -d
 
             echo ">>> Waiting 15 seconds for services to stabilize..."
@@ -111,9 +109,8 @@ jobs:
           
             echo ">>> 5. Creating superuser (if not exists)"
             docker compose exec -T web python src/core/create_superuser.py || true
-            
+          
             echo ">>> 6. Cleaning up old Docker images..."
-            # Удаляем старые, неиспользуемые образы, чтобы освободить место
             docker image prune -f
           
             echo "✅ Deployment successful!"
