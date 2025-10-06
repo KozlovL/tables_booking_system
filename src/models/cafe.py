@@ -62,3 +62,4 @@ class Cafe(Base, TimestampMixin, ActiveMixin):
     )
     time_slots = relationship('TimeSlot', back_populates='cafe',
                               lazy='selectin')
+    actions = relationship("Action", back_populates="cafe")
