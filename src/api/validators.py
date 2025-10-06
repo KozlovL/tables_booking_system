@@ -1,5 +1,5 @@
 from datetime import date, time, datetime
-from typing import Union, Optional
+from typing import Any, Union, Optional, Type
 from fastapi import HTTPException, status
 from sqlalchemy import exists, select
 from http import HTTPStatus
@@ -13,6 +13,8 @@ from src.crud.table import table_crud
 from src.models import Dish
 from src.models.table import TableModel
 from src.models.cafe import Cafe
+from src.core.db import Base
+from src.core.logger import logger
 from src.crud import cafe_crud, dish_crud, table_crud, time_slot_crud
 from src.models import Cafe, Dish, TableModel, TimeSlot
 
@@ -21,13 +23,20 @@ async def get_table_or_404(
     session: AsyncSession,
     table_id: int,
     cafe_id: int,
-    include_inactive: bool
+    include_inactive: bool,
 ) -> TableModel:
     """Проверка существования объекта с cafe_id, table_id."""
     table = await table_crud.get_by_id_and_cafe(
-        session, table_id, cafe_id, include_inactive
+        session,
+        table_id,
+        cafe_id,
+        include_inactive,
     )
     if not table:
+      logger.warning(
+            'Стол или кафе не найдены',
+            details={'table_id': table_id, 'cafe_id': cafe_id},
+        )
         raise ResourceNotFoundError (resource_name= "Стол")
     return table
 
@@ -36,65 +45,70 @@ async def cafe_exists(cafe_id: int, session: AsyncSession) -> None:
     """Функция проверки существования кафе."""
     exists_query = select(exists().where(Cafe.id == cafe_id))
     if not await session.scalar(exists_query):
+        logger.warning('Кафе не найдено', details={'cafe_id': cafe_id})
         raise ResourceNotFoundError("Кафе")
 
 
 async def check_dish_name_duplicate(
-        dish_name: str,
-        cafe: Cafe,
-        session: AsyncSession,
+    dish_name: str,
+    cafe: Cafe,
+    session: AsyncSession,
 ) -> None:
-    """Проверяет дублирование названия блюда в кафе."""
+    """Проверяет уникальность названия блюда в кафе."""
     dish = await dish_crud.get_by_field(
         session,
         name=dish_name,
         cafe=cafe,
     )
     if dish is not None:
+      logger.warning(
+            'Блюдо с таким названием уже существует',
+            details={'dish_name': dish_name, 'cafe_id': cafe.id},
+        )
         raise DuplicateError(
             entity='Блюдо'
         )
 
 
 async def get_dish_or_404(
-        dish_id: int,
-        session: AsyncSession,
-        extra_uploading: bool = False,
+    dish_id: int,
+    session: AsyncSession,
+    extra_uploading: bool = False,
 ) -> Dish:
+    """Возвращает блюдо или ошибку 404."""
     dish = await dish_crud.get_by_field(
         session=session,
         extra_uploading=extra_uploading,
         id=dish_id,
     )
     if dish is None:
+        logger.warning('Блюдо не найдено', details={'dish_id': dish_id})
         raise ResourceNotFoundError(resource_name="блюдо")
     return dish
 
 
 async def get_cafe_or_404(
-        cafe_id: int,
-        session: AsyncSession,
+    cafe_id: int,
+    session: AsyncSession,
 ) -> Cafe:
-    """Функция получения кафе или ошибки 404."""
+    """Возвращает кафе или ошибку 404."""
     cafe = await cafe_crud.get_by_field(
         session,
         id=cafe_id,
     )
     if cafe is None:
+       logger.warning('Кафе не найдено', details={'cafe_id': cafe_id})
         raise ResourceNotFoundError(resource_name="Кафе")
     return cafe
 
 
-async def check_unique_fields(  # проверяет уникальность полей(что бы избежать ошибки 500)
+async def check_unique_fields(
     session: AsyncSession,
-    model,
+    model: Type[Base],  # type: ignore
     exclude_id: int | None,
-    **field_values,
+    **field_values: Any,
 ) -> None:
-    """
-    Проверяет, что указанные значения полей уникальны для модели,
-    за исключением записи с exclude_id (если указан).
-    """
+    """Проверяет уникальность указанных полей модели."""
     for field_name, value in field_values.items():
         if value is None:
             continue
@@ -105,11 +119,16 @@ async def check_unique_fields(  # проверяет уникальность п
 
         existing = await session.scalar(query)
         if existing:
-            raise DuplicateError
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f'{field_name} занято'
+           logger.warning(
+                f'{field_name} уже занято',
+                details={
+                    'field': field_name,
+                    'value': value,
+                    'exclude_id': exclude_id,
+                },
             )
+            raise DuplicateError
+            
 
 
 # def _to_naive_time(value: Union[str, datetime, time, None]) -> time | None:
