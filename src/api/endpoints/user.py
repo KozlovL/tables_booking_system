@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.validators import check_unique_fields
@@ -121,7 +121,8 @@ async def update_me(
     '/{user_id}',
     response_model=UserUpdate,
     status_code=status.HTTP_200_OK,
-    summary='Обновление данных пользователя по ID (только для администратора)',
+    summary='Обновление данных пользователя по ID '
+            '(только для администратора)',
 )
 async def update_user(
     user_id: int,
@@ -202,3 +203,39 @@ async def get_user_by_id(
         details={'target_user_id': user_id},
     )
     return db_user
+
+@router.get(
+    '',
+    response_model=list[UserRead],
+    status_code=status.HTTP_200_OK,
+    summary='Получение списка пользователей, '
+            'только для администратора '
+    )
+async def list_users(
+    show_all: bool = Query(False,
+                           description='Показать всех пользователей '
+                                       ' только для админа',
+                           ),
+    limit: int | None = Query(None, ge=1),
+    offset: int = Query(0, ge=0),
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+) -> list[UserRead]:
+    # если пользователь не админ → всегда только активные
+    """Получение списка пользователей, олько для администратора"""
+    only_active = True
+    if current_user.is_superuser:
+        only_active = not show_all
+
+    users = await user_crud.get_multi_filtered(
+        session,
+        only_active=only_active,
+    )
+
+    logger.info(
+        'Получен список пользователей',
+        username=current_user.username,
+        user_id=current_user.id,
+        details={'count': len(users), 'only_active': only_active},
+    )
+    return users

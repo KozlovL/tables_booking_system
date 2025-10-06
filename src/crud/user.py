@@ -112,5 +112,20 @@ class CRUDUser(CRUDBase):
         res = await session.execute(select(User).where(or_(*conditions)))
         return res.scalar_one_or_none()
 
+    async def get_multi_filtered(
+        self,
+        session: AsyncSession,
+        *,
+        only_active: bool = True,
+    ) -> list[User]:
+        """Возвращает всех пользователей, можно фильтровать только активные."""
+        stmt = select(self.model)
+        if only_active:
+            stmt = stmt.where(User.active.is_(True))
+        res = await session.execute(stmt)
+        users = list(res.scalars())
+        logger.info(f'Получено {len(users)} кафе (only_active={only_active})')
+        return users
+
 
 user_crud = CRUDUser(User)
