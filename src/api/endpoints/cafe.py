@@ -158,5 +158,6 @@ async def update_cafe(
             username=current_user.username,
             user_id=current_user.id,
             details={'cafe_id': cafe.id},
+    )
     return cafe
 

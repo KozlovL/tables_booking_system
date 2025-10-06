@@ -8,7 +8,7 @@ from src.core.logger import log_request, logger
 from src.core.security import get_password_hash
 from src.crud.user import user_crud
 from src.models.user import User
-from src.schemas.user import UserCreate, UserRead, UserUpdate
+from src.schemas.user import UserCreate, UserRead, UserUpdate, UserShort
 from src.api.validators import check_unique_fields
 from src.core.exceptions import (ResourceNotFoundError,
                                  DuplicateError
@@ -42,7 +42,7 @@ async def create_user_endpoint(payload: UserCreate,
             '(доступно только текущему пользователю)',
     )
 async def read_me(
-    current_user: UserShort = Depends(get_current_user),
+    current_user: UserRead = Depends(get_current_user),
 ) -> UserRead:
     """Получение данных текущего пользователя."""
     logger.info(
@@ -73,16 +73,13 @@ async def update_me(
             'Попытка обновления несуществующего пользователя',
             username=current_user.username,
             user_id=current_user.id,
-        )
-        raise ResourceNotFoundError("Пользователь")
-
+      )
+      raise ResourceNotFoundError("Пользователь")
     data = payload.model_dump(exclude_unset=True)
 
     # если пришёл пароль — хэшируем
     if "password" in data:
         data["hashed_password"] = get_password_hash(data.pop("password"))
-
-
 
     # ограничим список меняемых колонок (на всякий случай)
     updatable = {"username", "email", "phone", "tg_id", "hashed_password"}
@@ -99,7 +96,7 @@ async def update_me(
             **fields_to_check
         )
 
-    db_user = await  user_crud.update(db_user,
+    updated_user = await  user_crud.update(db_user,
                                       data,
                                       session,
                                       updatable_fields=updatable
@@ -198,8 +195,6 @@ async def get_user_by_id(
     db_user = await user_crud.get(user_id, session)
     if db_user is None:
         raise ResourceNotFoundError("Пользователь")
-    return db_user
-
     logger.info(
         'Получены данные пользователя админом',
         username=current_admin.username,

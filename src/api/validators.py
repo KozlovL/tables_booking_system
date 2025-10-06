@@ -37,7 +37,7 @@ async def get_table_or_404(
             'Стол или кафе не найдены',
             details={'table_id': table_id, 'cafe_id': cafe_id},
         )
-        raise ResourceNotFoundError (resource_name= "Стол")
+      raise ResourceNotFoundError (resource_name= "Стол")
     return table
 
 
@@ -64,10 +64,10 @@ async def check_dish_name_duplicate(
       logger.warning(
             'Блюдо с таким названием уже существует',
             details={'dish_name': dish_name, 'cafe_id': cafe.id},
-        )
-        raise DuplicateError(
+      )
+      raise DuplicateError(
             entity='Блюдо'
-        )
+      )
 
 
 async def get_dish_or_404(
@@ -98,7 +98,7 @@ async def get_cafe_or_404(
     )
     if cafe is None:
        logger.warning('Кафе не найдено', details={'cafe_id': cafe_id})
-        raise ResourceNotFoundError(resource_name="Кафе")
+       raise ResourceNotFoundError(resource_name="Кафе")
     return cafe
 
 
@@ -116,7 +116,6 @@ async def check_unique_fields(
         query = select(model).where(getattr(model, field_name) == value)
         if exclude_id is not None:
             query = query.where(model.id != exclude_id)
-
         existing = await session.scalar(query)
         if existing:
            logger.warning(
@@ -126,8 +125,8 @@ async def check_unique_fields(
                     'value': value,
                     'exclude_id': exclude_id,
                 },
-            )
-            raise DuplicateError
+           )
+           raise DuplicateError
             
 
 
