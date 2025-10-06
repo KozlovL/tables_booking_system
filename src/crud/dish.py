@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 from src.core.logger import logger
 from src.crud.base import CRUDBase
 from src.models import Dish, Cafe, User
+from src.schemas.dish import DishCreate, DishUpdate
 
 
 class CRUDDish(CRUDBase):

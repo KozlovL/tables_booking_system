@@ -1,11 +1,12 @@
 from datetime import date, time, datetime
-from typing import Union, Optional
+from typing import Any, Union, Optional, Type
 from fastapi import HTTPException, status
 from sqlalchemy import exists, select
 from http import HTTPStatus
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.db import Base
 from src.core.logger import logger
 from src.crud import cafe_crud, dish_crud, table_crud, time_slot_crud
 from src.models import Cafe, Dish, TableModel, TimeSlot
