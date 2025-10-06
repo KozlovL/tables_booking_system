@@ -3,7 +3,10 @@ from typing import Any, Union, Optional, Type
 from fastapi import HTTPException, status
 from sqlalchemy import exists, select
 from http import HTTPStatus
+from typing import Optional, Union
 
+from fastapi import HTTPException, status
+from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import DuplicateError, ResourceNotFoundError
@@ -15,8 +18,14 @@ from src.models.table import TableModel
 from src.models.cafe import Cafe
 from src.core.db import Base
 from src.core.logger import logger
-from src.crud import cafe_crud, dish_crud, table_crud, time_slot_crud
-from src.models import Cafe, Dish, TableModel, TimeSlot
+from src.crud import (
+    action_crud,
+    cafe_crud,
+    dish_crud,
+    table_crud,
+    time_slot_crud,
+)
+from src.models import Action, Cafe, Dish, TableModel, TimeSlot
 
 
 async def get_table_or_404(
@@ -261,3 +270,14 @@ async def validate_and_check_conflicts(
 #             detail='Слот или кафе не найдены'
 #             )
 #     return slot
+
+
+async def get_action_or_404(
+    action_id: int,
+    session: AsyncSession,
+) -> Action:
+    """Проверяет есть ли такая акция."""
+    action = await action_crud.get_by_id(action_id=action_id, session=session)
+    if not action:
+        raise HTTPException(status_code=404, detail='Акция не найдена')
+    return action
