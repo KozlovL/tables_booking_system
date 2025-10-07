@@ -1,6 +1,5 @@
 from datetime import date, time, datetime
 from typing import Any, Union, Optional, Type
-from fastapi import HTTPException
 from sqlalchemy import exists, select
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +21,7 @@ from src.crud import (
     time_slot_crud,
 )
 from src.models import Action, Cafe, Dish, TableModel, TimeSlot
+from src.schemas.cafe import CafeCreate
 
 
 async def get_table_or_404(
@@ -214,3 +214,25 @@ async def get_action_or_404(
     if not action:
         raise ResourceNotFoundError('Акция')
     return action
+
+
+async def check_cafe_name_duplicate(
+    cafe: CafeCreate,
+    session: AsyncSession,
+    exclude_id: int | None = None,
+) -> None:
+    """Проверяет уникальность названия блюда в кафе."""
+    query = select(exists().where(Cafe.name == cafe.name))
+
+    if exclude_id is not None:
+        query = query.where(Cafe.id != exclude_id)
+
+    result = await session.execute(query)
+    if result.scalar():
+        logger.warning(
+                'Кафе с таким названием уже существует',
+                details={'cafe_name': cafe.name},
+        )
+        raise DuplicateError(
+                entity='Кафе'
+        )
