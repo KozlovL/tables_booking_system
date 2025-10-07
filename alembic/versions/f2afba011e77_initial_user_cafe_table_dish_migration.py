@@ -107,6 +107,18 @@ def upgrade():
     with op.batch_alter_table('time_slots', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_time_slots_cafe_id'), ['cafe_id'], unique=False)
 
+    op.create_table('actions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('cafe_id', sa.Integer(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=False),
+    sa.Column('active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.ForeignKeyConstraint(['cafe_id'], ['cafe.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('actions', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_actions_id'), ['id'], unique=False)
     # ### end Alembic commands ###
 
 
@@ -130,5 +142,6 @@ def downgrade():
         batch_op.drop_index(batch_op.f('ix_cafe_name'))
         batch_op.drop_index(batch_op.f('ix_cafe_address'))
 
+    op.drop_table('actions')
     op.drop_table('cafe')
     # ### end Alembic commands ###

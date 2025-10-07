@@ -1,34 +1,48 @@
-# app/crud/base.py
-from typing import Iterable, Any
+from typing import Any, Iterable
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, undefer
 
+from src.core.logger import logger
 from src.models import Cafe
 
 
 class CRUDBase:
-    def __init__(self, model):
+    """Базовый CRUD для SQLAlchemy-моделей."""
+
+    def __init__(self, model: type) -> None:
+        """Инициализация с моделью."""
         self.model = model
 
-    async def get(self, obj_id: int, session: AsyncSession):
-        return await session.get(self.model, obj_id)
+    async def get(self, obj_id: int, session: AsyncSession) -> Any:
+        """Возвращает объект по ID."""
+        obj = await session.get(self.model, obj_id)
+        logger.info(f'Получен объект {self.model.__name__} id={obj_id}')
+        return obj
 
-    async def get_multi(self, session: AsyncSession):
+    async def get_multi(self, session: AsyncSession) -> list[Any]:
+        """Возвращает все объекты модели."""
         stmt = select(self.model)
         res = await session.execute(stmt)
-        return list(res.scalars())
+        objs = list(res.scalars())
+        logger.info(f'Получено {len(objs)} объектов {self.model.__name__}')
+        return objs
 
-    async def create(self,
-                     obj_in,
-                     session: AsyncSession,
-                     *,
-                     exclude_fields: set[str] | None = None,
-                     **extra_fields,
-                     ):
-        data = obj_in.model_dump(exclude_unset=True) if (
-            hasattr(obj_in, "model_dump")) else dict(obj_in)
+    async def create(
+        self,
+        obj_in: Any,
+        session: AsyncSession,
+        *,
+        exclude_fields: set[str] | None = None,
+        **extra_fields: Any,
+    ) -> Any:
+        """Создает объект модели."""
+        data = (
+            obj_in.model_dump(exclude_unset=True)
+            if hasattr(obj_in, 'model_dump')
+            else dict(obj_in)
+        )
         if exclude_fields:
             for f in exclude_fields:
                 data.pop(f, None)
@@ -37,57 +51,44 @@ class CRUDBase:
         db_obj = self.model(**data)
         session.add(db_obj)
         await session.flush()
+        logger.info(f'Создан объект {self.model.__name__} с данными {data}')
         return db_obj
 
     async def update(
         self,
-        db_obj,
-        obj_in,
+        db_obj: Any,
+        obj_in: Any,
         session: AsyncSession,
         updatable_fields: Iterable[str] | None = None,
-    ):
+    ) -> Any:
+        """Обновляет объект модели."""
         data = (
-            obj_in.model_dump(exclude_unset=True)) \
-            if hasattr(obj_in, "model_dump") else dict(obj_in)
-
-        # ограничим обновление только колонками модели
+            obj_in.model_dump(exclude_unset=True)
+            if hasattr(obj_in, 'model_dump')
+            else dict(obj_in)
+        )
         cols = {c.name for c in db_obj.__table__.columns}
         if updatable_fields is not None:
             cols &= set(updatable_fields)
-
         for field, value in data.items():
             if field in cols:
                 setattr(db_obj, field, value)
-
-        # для M2M/отношений обновление делается снаружи (не тут)
         await session.flush()
+        logger.info(
+            f'Обновлен объект {self.model.__name__} '
+            f'id={getattr(db_obj, "id", None)} с полями {list(data.keys())}',
+        )
         return db_obj
 
     async def get_by_field(
-            self,
-            session: AsyncSession,
-            many: bool = False,
-            extra_uploading: bool = False,
-            **kwargs: Any
-    ):
-        """
-        Функция получения одного или нескольких объектов по полям.
-
-        Примеры запроса:
-
-        objects_by_name = object_crud.get_by_field(
-            session=session,
-            many=True,
-            name='some_name'
-        )
-
-        single_object_by_slug = object_crud.get_by_slug(
-            session=session,
-            slug='some_name'
-        """
+        self,
+        session: AsyncSession,
+        many: bool = False,
+        extra_uploading: bool = False,
+        **kwargs: Any,
+    ) -> Any:
+        """Возвращает объекты по указанным полям."""
         stmt = select(self.model).filter_by(**kwargs)
-        # Если модель не кафе и передали extra_uploading, то подгружаем
-        # менеджеров, кафе и даты
         if self.model != Cafe and extra_uploading:
             stmt = stmt.options(
                 selectinload(self.model.cafe).selectinload(Cafe.managers),
@@ -96,4 +97,9 @@ class CRUDBase:
             )
         result = await session.execute(stmt)
         scalars = result.scalars()
-        return scalars.all() if many else scalars.first()
+        objs = scalars.all() if many else scalars.first()
+        logger.info(
+            f'Получено {"множество" if many else "один"} '
+            f'объектов {self.model.__name__} по {kwargs}',
+        )
+        return objs

@@ -10,23 +10,23 @@ from src.schemas.user import UserShort
 
 
 class CafeCreate(BaseModel):
-    """Схема для создания Кафе"""
+    """Схема для создания кафе."""
 
     name: str
     address: str
-    phone: PhoneNumber
+    phone: PhoneNumber  # type: ignore
     description: Optional[str] = None
-    photo: Optional[str] = None              # base64 строка
-    managers: List[int] = []                 # список ID менеджеров
+    photo: Optional[str] = None
+    managers: List[int] = []
 
 
 class CafeRead(BaseModel):
-    """Схема выдачи кафе наружу"""
+    """Схема для выдачи данных кафе наружу."""
 
     id: int
     name: str
     address: str
-    phone: PhoneNumber
+    phone: PhoneNumber  # type: ignore
     description: Optional[str] = None
     photo: Optional[str] = None
     active: bool
@@ -45,17 +45,16 @@ class CafeUpdate(BaseModel):
     photo: Optional[str] = None
     managers: Optional[List[int]] = None
     active: Optional[bool] = None
-
     model_config = ConfigDict(from_attributes=True)
 
 
 class CafeShort(BaseModel):
-    """Схема выдачи кафе наружу кратко"""
+    """Краткая схема для выдачи кафе."""
 
     id: int
     name: str
     address: str
-    phone: PhoneNumber
+    phone: PhoneNumber  # type: ignore
     description: Optional[str] = None
     photo: Optional[str] = None
     active: bool

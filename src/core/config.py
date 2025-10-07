@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     """Настройки приложения."""
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_title: str = 'Бронирование столиков'
@@ -28,7 +29,6 @@ class Settings(BaseSettings):
     postgres_db: str | None = None
     postgres_host: str | None = None
     postgres_port: int | None = None
-
 
 
 settings = Settings()
