@@ -2,6 +2,7 @@ from datetime import date
 from typing import List, Optional
 from sqlalchemy import select, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.crud.base import CRUDBase
 from src.models.booking import (BookingModel, BookingStatus,
@@ -14,6 +15,23 @@ from src.models.table import TableModel
 class CRUDBooking(CRUDBase):
     def __init__(self):
         super().__init__(BookingModel)
+
+    async def get_with_relations(
+        self,
+        booking_id: int,
+        session: AsyncSession,
+    ) -> BookingModel | None:
+        stmt = (
+            select(BookingModel)
+            .options(
+                selectinload(BookingModel.slots),
+                selectinload(BookingModel.tables),
+                selectinload(BookingModel.menu),
+            )
+            .where(BookingModel.id == booking_id)
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def create(
         self,
@@ -136,21 +154,26 @@ class CRUDBooking(CRUDBase):
     async def check_booking_conflicts(
         self,
         session: AsyncSession,
+        cafe_id: int,
         table_ids: List[int],
         slot_ids: List[int],
         booking_date: date,
         exclude_booking_id: Optional[int] = None
     ) -> bool:
         """Проверяет конфликты бронирований для столов и слотов"""
-        stmt = select(BookingModel).join(BookingModel.tables).join(BookingModel.slots).where(
-            and_(
-                BookingModel.booking_date == booking_date,
-                BookingModel.active,
-                BookingModel.status == BookingStatus.BOOKED,
-                or_(
-                    BookingModel.tables.any(TableModel.id.in_(table_ids)),
-                    BookingModel.slots.any(TimeSlot.id.in_(slot_ids))
-                )
+        stmt = (
+            select(BookingModel)
+            .join(BookingModel.slots)
+            .join(BookingModel.tables)
+            .where(
+                BookingModel.cafe_id == cafe_id,
+                TimeSlot.date == booking_date,
+                BookingModel.active.is_(True),
+                BookingModel.status.in_(
+                    [BookingStatus.BOOKED, BookingStatus.ACTIVE]
+                ),
+                TableModel.id.in_(table_ids),
+                TimeSlot.id.in_(slot_ids)
             )
         )
 

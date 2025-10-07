@@ -5,3 +5,4 @@ from .table import TableModel as TableModel # noqa
 from .user import User as User # noqa
 from .slot import TimeSlot as TimeSlot # noqa
 from .booking import BookingModel as BookingModel # noqa
+from .booking import BookingStatus as BookingStatus # noqa

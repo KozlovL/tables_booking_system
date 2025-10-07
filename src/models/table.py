@@ -7,7 +7,7 @@ from src.core.db import Base
 from src.core.db import ActiveMixin, Base, TimestampMixin
 
 if TYPE_CHECKING:
-    from src.models.cafe import Cafe
+    from src.models import Cafe, BookingModel
 
 
 class TableModel(Base, TimestampMixin, ActiveMixin):

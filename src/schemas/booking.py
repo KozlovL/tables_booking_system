@@ -18,7 +18,6 @@ class BookingStatus(IntEnum):
 
 class BookingBase(BaseModel):
     cafe_id: int = Field(..., description='ID кафе')
-    booking_date: date = Field(..., description='Дата бронирования')
     guests_number: int = Field(..., ge=1, description='Количество гостей')
     note: Optional[str] = Field(None, description='Примечание к бронированию')
 
@@ -27,12 +26,6 @@ class BookingCreate(BookingBase):
     tables: List[int] = Field(..., description='Бронируемые столы')
     slots: List[int] = Field(..., description='Слоты бронирования')
     menu: Optional[List[int]] = Field([], description='Блюда для предварительного заказа')
-
-    @model_validator(mode='after')
-    def validate_booking_date_not_in_past(self):
-        if self.booking_date < date.today():
-            raise ValueError('Нельзя бронировать на прошедшие даты')
-        return self
 
 
 class BookingUpdate(BaseModel):

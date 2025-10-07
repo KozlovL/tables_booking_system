@@ -270,3 +270,128 @@ async def validate_and_check_conflicts(
 #             detail='Слот или кафе не найдены'
 #             )
 #     return slot
+
+
+async def cafe_exists_and_acitve(cafe_id: int, session: AsyncSession) -> None:
+    """Функция проверки существования кафе."""
+    exists_query = select(exists().where(
+        Cafe.id == cafe_id,
+        Cafe.active.is_(True),
+    ))
+    if not await session.scalar(exists_query):
+        logger.warning('Кафе не найдено', details={'cafe_id': cafe_id})
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Кафе не найдено',
+        )
+
+
+async def validate_table_for_booking(
+    table_ids: list[int],
+    cafe_id: int,
+    guests_number: int,
+    session: AsyncSession,
+) -> None:
+    if not table_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Список столов не может быть пустым'
+        )
+    stmt = select(TableModel).where(
+        TableModel.id.in_(table_ids),
+        TableModel.cafe_id == cafe_id,
+        TableModel.active.is_(True)
+    )
+    result = await session.execute(stmt)
+    tables = set(result.scalars().all())
+
+    if len(tables) != len(table_ids):
+        invalid = set(table_ids) - tables
+        logger.warning(
+            'Один или несколько слотов не найдены или неактивны',
+            details={'cafe_id': cafe_id, 'tables': list(invalid)}
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Один или несколько столов не найдены или неактивны'
+        )
+
+    total_seats = sum(table.seats_number for table in tables)
+    if guests_number > total_seats:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Общая вместимость столов {total_seats} меньше '
+                   f'числа гостей {guests_number}'
+        )
+
+
+async def validate_slot_for_booking(
+    slot_ids: list[int],
+    cafe_id: int,
+    session: AsyncSession,
+) -> date:
+    if not slot_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Список слотов не может быть пустым'
+        )
+    stmt = select(TimeSlot.id,  TimeSlot.date).where(
+        TimeSlot.id.in_(slot_ids),
+        TimeSlot.cafe_id == cafe_id,
+        TimeSlot.active.is_(True),
+    )
+    result = await session.execute(stmt)
+    slots = result.fetchall()
+
+    found_ids = {slot.id for slot in slots}
+
+    if len(slots) != len(slot_ids):
+        invalid = set(slot_ids) - found_ids
+        logger.warning(
+            'Один или несколько слотов не найдены или неактивны',
+            details={'cafe_id': cafe_id, 'invalid_slot_ids': list(invalid)}
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Один или несколько слотов не найдены или неактивены'
+        )
+    slot_dates = {slot.date for slot in slots}
+    if len(slot_dates) != 1:
+        logger.warning(
+            'Все слоты должны быть на одну дату',
+            details={'cafe_id': cafe_id, 'slot_dates': slot_dates}
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            details='Все слоты должны быть на одну дату.',
+        )
+    return slot_dates.pop()
+
+
+async def validate_dish_for_booking(
+    dish_ids: list[int],
+    cafe_id: int,
+    session: AsyncSession,
+) -> None:
+    if not dish_ids:
+        return
+    unique_dish_ids = list(set(dish_ids))
+
+    stmt = select(Dish.id).where(
+        Dish.id.in_(unique_dish_ids),
+        Dish.cafe_id == cafe_id,
+        Dish.active.is_(True),
+    )
+    result = await session.execute(stmt)
+    dishes = set(result.scalars().all())
+
+    if len(dishes) != len(dish_ids):
+        invalid = set(dish_ids) - dishes
+        logger.warning(
+            'Одно или несколько блюд не найдены или неактивны',
+            details={'cafe_id': cafe_id, 'invalid_slot_ids': list(invalid)}
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Одно или несколько блюд не найдены или неактивны'
+        )
