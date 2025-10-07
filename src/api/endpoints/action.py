@@ -1,24 +1,26 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import can_view_inactive, require_manager_or_admin
 from src.api.validators import (
     cafe_exists,
     get_action_or_404,
+    get_cafe_or_404
 )
+from src.core.exceptions import ResourceNotFoundError
 from src.core.auth import get_current_user
 from src.core.db import get_async_session
 from src.crud.action import action_crud
 from src.models.user import User
 from src.schemas.action import ActionCreate, ActionUpdate, ActionWithCafe
 
-router = APIRouter(prefix="/actions", tags=["Акции"])
+router = APIRouter(prefix='/actions', tags=['Акции'])
 
 
 @router.get(
-    "/",
+    "",
     response_model=List[ActionWithCafe],
     summary='Получение списка акций '
             '(только для администратора и менеджера,'
@@ -31,38 +33,26 @@ async def get_actions(
     session: AsyncSession = Depends(get_async_session),
 ) -> List[ActionWithCafe]:
     """Получение списка акций."""
-    if cafe_id:
-        await cafe_exists(cafe_id, session)
+    cafe = None
+    if cafe_id is not None:
+        cafe = await get_cafe_or_404(cafe_id=cafe_id, session=session)
 
-    if not current_user.is_superuser and not current_user.managed_cafes:
-        if show_all:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Требуются права менеджера или администратора",
-            )
-        include_inactive = False
-        cafe_ids = None
-    else:
-        check_cafe_id = cafe_id
-        if not check_cafe_id and current_user.managed_cafes:
-            check_cafe_id = current_user.managed_cafes[0].id
+    has_permission_for_inactive = can_view_inactive(cafe_id, current_user)
 
-        include_inactive = can_view_inactive(check_cafe_id, current_user)
+    active_only = not (show_all is True and has_permission_for_inactive)
 
-        cafe_ids = None
-        if current_user.managed_cafes and not current_user.is_superuser:
-            cafe_ids = [cafe.id for cafe in current_user.managed_cafes]
-
-    return await action_crud.get_multi(
-        session,
-        cafe_id=cafe_id,
-        cafe_ids=cafe_ids,
-        include_inactive=include_inactive and show_all,
+    actions = await action_crud.get_actions_with_access_control(
+        session=session,
+        cafe=cafe,
+        active_only=active_only,
+        current_user=current_user,
     )
+
+    return actions
 
 
 @router.post(
-    "/",
+    "",
     response_model=ActionWithCafe,
     status_code=201,
     summary='Создание акции (только для администратора и менеджера)',
@@ -94,10 +84,7 @@ async def get_action(
     action_obj = await get_action_or_404(action_id, session)
     include_inactive = can_view_inactive(action_obj.cafe_id, current_user)
     if not include_inactive and not action_obj.active:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Акция не найдена",
-        )
+        raise ResourceNotFoundError('Акция')
 
     return action_obj
 

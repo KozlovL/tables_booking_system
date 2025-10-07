@@ -1,12 +1,11 @@
 from datetime import date, time, datetime
 from typing import Any, Union, Optional, Type
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from sqlalchemy import exists, select
-from http import HTTPStatus
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.exceptions import DuplicateError, ResourceNotFoundError
+from src.core.exceptions import AppException, DuplicateError, ResourceNotFoundError
 from src.crud.cafe import cafe_crud
 from src.crud.dish import dish_crud
 from src.crud.table import table_crud
@@ -39,11 +38,11 @@ async def get_table_or_404(
         include_inactive,
     )
     if not table:
-      logger.warning(
-            'Стол или кафе не найдены',
-            details={'table_id': table_id, 'cafe_id': cafe_id},
-        )
-      raise ResourceNotFoundError (resource_name= "Стол")
+        logger.warning(
+                'Стол или кафе не найдены',
+                details={'table_id': table_id, 'cafe_id': cafe_id},
+            )
+        raise ResourceNotFoundError(resource_name= "Стол")
     return table
 
 
@@ -67,13 +66,13 @@ async def check_dish_name_duplicate(
         cafe=cafe,
     )
     if dish is not None:
-      logger.warning(
-            'Блюдо с таким названием уже существует',
-            details={'dish_name': dish_name, 'cafe_id': cafe.id},
-      )
-      raise DuplicateError(
-            entity='Блюдо'
-      )
+        logger.warning(
+                'Блюдо с таким названием уже существует',
+                details={'dish_name': dish_name, 'cafe_id': cafe.id},
+        )
+        raise DuplicateError(
+                entity='Блюдо'
+        )
 
 
 async def get_dish_or_404(
@@ -103,8 +102,8 @@ async def get_cafe_or_404(
         id=cafe_id,
     )
     if cafe is None:
-       logger.warning('Кафе не найдено', details={'cafe_id': cafe_id})
-       raise ResourceNotFoundError(resource_name="Кафе")
+        logger.warning('Кафе не найдено', details={'cafe_id': cafe_id})
+        raise ResourceNotFoundError(resource_name="Кафе")
     return cafe
 
 
@@ -124,16 +123,15 @@ async def check_unique_fields(
             query = query.where(model.id != exclude_id)
         existing = await session.scalar(query)
         if existing:
-           logger.warning(
-                f'{field_name} уже занято',
-                details={
-                    'field': field_name,
-                    'value': value,
-                    'exclude_id': exclude_id,
-                },
-           )
-           raise DuplicateError
-            
+            logger.warning(
+                    f'{field_name} уже занято',
+                    details={
+                        'field': field_name,
+                        'value': value,
+                        'exclude_id': exclude_id,
+                    },
+            )
+            raise DuplicateError
 
 
 async def get_timeslot_or_404(
@@ -143,7 +141,7 @@ async def get_timeslot_or_404(
     """Проверяет, что слот существует; если нет — 404."""
     timeslot = await time_slot_crud.get(obj_id=timeslot_id, session=session)
     if not timeslot:
-        raise HTTPException(status_code=404, detail='Слот не найден!')
+        raise ResourceNotFoundError('Слот')
     return timeslot
 
 
@@ -159,7 +157,7 @@ async def get_timeslot_or_404_with_relations(
         session=session,
     )
     if not timeslot:
-        raise HTTPException(status_code=404, detail='Слот не найден!')
+        raise ResourceNotFoundError('Слот')
     return timeslot
 
 
@@ -181,9 +179,8 @@ async def check_timeslot_intersections(
         session=session,
         exclude_slot_id=timeslot_id,
     ):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail='Временной слот пересекается с существующим!',
+        raise AppException(
+            detail='Временной слот пересекается с существующим!'
         )
 
 
@@ -215,5 +212,5 @@ async def get_action_or_404(
     """Проверяет есть ли такая акция."""
     action = await action_crud.get_by_id(action_id=action_id, session=session)
     if not action:
-        raise HTTPException(status_code=404, detail='Акция не найдена')
+        raise ResourceNotFoundError('Акция')
     return action

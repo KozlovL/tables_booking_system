@@ -1,46 +1,20 @@
 from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.models.action import Action
-from src.models.cafe import Cafe
+from src.models import Cafe, User, Action
 from src.schemas.action import ActionCreate, ActionUpdate
 
 
 class ActionCRUD:
     """CRUD операции для работы с акциями."""
 
-    def _build_query(
-            self,
-            cafe_id: Optional[int] = None,
-            cafe_ids: Optional[List[int]] = None,
-            include_inactive: bool = False,
-    ) -> select:
-        """Базовый запрос для получения акций."""
-        query = select(Action).options(
-            selectinload(Action.cafe),
-        )
-
-        if cafe_id is not None:
-            query = query.where(Action.cafe_id == cafe_id)
-        elif cafe_ids is not None:
-            query = query.where(Action.cafe_id.in_(cafe_ids))
-
-        if not include_inactive:
-            query = query.join(Cafe, Action.cafe_id == Cafe.id).where(
-                Action.active.is_(True),
-                Cafe.active.is_(True),
-            )
-
-        return query
-
     async def get_by_id(
             self,
             session: AsyncSession,
             action_id: int,
-            include_inactive: bool = False,
     ) -> Optional[Action]:
         """Получение акции по ID."""
         query = select(Action).options(
@@ -49,22 +23,6 @@ class ActionCRUD:
 
         result = await session.execute(query)
         return result.scalars().first()
-
-    async def get_multi(
-            self,
-            session: AsyncSession,
-            cafe_id: Optional[int] = None,
-            cafe_ids: Optional[List[int]] = None,
-            include_inactive: bool = False,
-    ) -> List[Action]:
-        """Получение списка акций."""
-        query = self._build_query(
-            cafe_id=cafe_id,
-            cafe_ids=cafe_ids,
-            include_inactive=include_inactive,
-        )
-        result = await session.execute(query)
-        return result.scalars().all()
 
     async def create(
             self,
@@ -78,7 +36,7 @@ class ActionCRUD:
 
         result = await session.execute(
             select(Action)
-            .options(selectinload(Action.cafe))
+            .options(selectinload(Action.cafe).selectinload(Cafe.managers))
             .where(Action.id == db_obj.id),
         )
         return result.scalar_one()
@@ -96,13 +54,48 @@ class ActionCRUD:
 
         session.add(db_obj)
         await session.commit()
-
+        await session.refresh(db_obj)
         result = await session.execute(
             select(Action)
-            .options(selectinload(Action.cafe))
+            .options(selectinload(Action.cafe).selectinload(Cafe.managers))
             .where(Action.id == db_obj.id),
         )
         return result.scalar_one()
+
+    async def get_actions_with_access_control(
+        self,
+        session: AsyncSession,
+        cafe: Cafe | None,
+        active_only: bool,
+        current_user: User,
+    ) -> list[Action]:
+        """Получаем список акций с фильтрацией доступа"""
+        query = select(Action).options(
+            selectinload(Action.cafe).selectinload(Cafe.managers),
+        )
+
+        if cafe is not None:
+            query = query.where(Action.cafe_id == cafe.id)
+        if active_only:
+            query = query.where(
+                Action.active.is_(True)
+            )
+        else:
+            if current_user.is_superuser:
+                pass
+            elif current_user.managed_cafe_ids:
+                query = query.where(
+                    or_(
+                        Action.active.is_(True),
+                        and_(
+                            Action.active.is_(False),
+                            Action.cafe_id.in_(current_user.managed_cafe_ids)
+                        )
+                    )
+                )
+
+        result = await session.execute(query)
+        return list(result.scalars().all())
 
 
 action_crud = ActionCRUD()
