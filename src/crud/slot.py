@@ -1,5 +1,5 @@
 from datetime import date, time
-from sqlalchemy import select, and_
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -55,12 +55,16 @@ class CRUDTimeSlot(CRUDBase):
     async def get_with_cafe(
         self,
         slot_id: int,
+        cafe_id: int,
         session: AsyncSession,
     ) -> TimeSlot | None:
         result = await session.execute(
             select(TimeSlot)
             .options(selectinload(TimeSlot.cafe).selectinload(Cafe.managers))
-            .where(TimeSlot.id == slot_id)
+            .where(
+                TimeSlot.id == slot_id,
+                TimeSlot.cafe_id == cafe_id,
+            )
         )
         return result.scalar_one_or_none()
 
