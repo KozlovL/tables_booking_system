@@ -5,8 +5,9 @@ from sqlalchemy.orm import selectinload
 
 from src.core.auth import get_current_user, require_admin
 from src.core.db import get_async_session
+from src.core.exceptions import ResourceNotFoundError, PermissionDeniedError
+from src.crud.cafe import cafe_crud
 from src.core.logger import log_request, logger
-from src.crud.cafe import cafe_crud, ManagersNotFoundError
 from src.models.cafe import Cafe as CafeModel
 from src.models.user import User
 from src.schemas.cafe import CafeCreate, CafeRead, CafeUpdate
@@ -109,8 +110,7 @@ async def get_cafe(
     cafe = res.scalar_one_or_none()
 
     if not cafe:
-        raise HTTPException(404, 'Cafe not found')
-
+        raise ResourceNotFoundError("Кафе")
     if cafe.active or current_user.is_superuser:
 
         logger.info(
@@ -120,8 +120,7 @@ async def get_cafe(
             details={'cafe_id': cafe.id},
         )
         return cafe
-
-    raise HTTPException(403, 'Not enough permissions')
+    raise PermissionDeniedError()
 
 
 @log_request()
@@ -141,32 +140,24 @@ async def update_cafe(
     """Обновление кафе по ID (только для администратора)."""
     cafe = await cafe_crud.get_with_managers(cafe_id, session)
     if not cafe:
-        raise HTTPException(404, 'Cafe not found')
+        raise ResourceNotFoundError("Кафе")
 
         # 2. Обработка фото (base64 → путь)
     update_data = payload.model_dump(exclude_unset=True)
     photo_url = None
-
     if 'photo' in update_data and update_data['photo']:
-        photo_url = update_data['photo']
-
-    try:
-        cafe = await cafe_crud.update_with_managers(
-            cafe,
-            payload,
-            session,
-            photo_url=photo_url,
+            photo_url = update_data['photo']
+    cafe = await cafe_crud.update_with_managers(
+        cafe,
+        payload,
+        session,
+        photo_url=photo_url,
         )
-
-        logger.info(
+    logger.info(
             'Обновлено кафе по ID',
             username=current_user.username,
             user_id=current_user.id,
             details={'cafe_id': cafe.id},
-        )
-
-    except ManagersNotFoundError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=str(e)
-                            )
+    )
     return cafe
+

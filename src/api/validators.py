@@ -6,6 +6,13 @@ from http import HTTPStatus
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.exceptions import DuplicateError, ResourceNotFoundError
+from src.crud.cafe import cafe_crud
+from src.crud.dish import dish_crud
+from src.crud.table import table_crud
+from src.models import Dish
+from src.models.table import TableModel
+from src.models.cafe import Cafe
 from src.core.db import Base
 from src.core.logger import logger
 from src.crud import (
@@ -32,14 +39,11 @@ async def get_table_or_404(
         include_inactive,
     )
     if not table:
-        logger.warning(
+      logger.warning(
             'Стол или кафе не найдены',
             details={'table_id': table_id, 'cafe_id': cafe_id},
         )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Стол или кафе не найдены',
-        )
+      raise ResourceNotFoundError (resource_name= "Стол")
     return table
 
 
@@ -48,10 +52,7 @@ async def cafe_exists(cafe_id: int, session: AsyncSession) -> None:
     exists_query = select(exists().where(Cafe.id == cafe_id))
     if not await session.scalar(exists_query):
         logger.warning('Кафе не найдено', details={'cafe_id': cafe_id})
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Кафе не найдено',
-        )
+        raise ResourceNotFoundError("Кафе")
 
 
 async def check_dish_name_duplicate(
@@ -66,14 +67,13 @@ async def check_dish_name_duplicate(
         cafe=cafe,
     )
     if dish is not None:
-        logger.warning(
+      logger.warning(
             'Блюдо с таким названием уже существует',
             details={'dish_name': dish_name, 'cafe_id': cafe.id},
-        )
-        raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST,
-            detail='Блюдо с таким названием уже существует!',
-        )
+      )
+      raise DuplicateError(
+            entity='Блюдо'
+      )
 
 
 async def get_dish_or_404(
@@ -89,10 +89,7 @@ async def get_dish_or_404(
     )
     if dish is None:
         logger.warning('Блюдо не найдено', details={'dish_id': dish_id})
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
-            detail='Блюдо не найдено',
-        )
+        raise ResourceNotFoundError(resource_name="блюдо")
     return dish
 
 
@@ -106,11 +103,8 @@ async def get_cafe_or_404(
         id=cafe_id,
     )
     if cafe is None:
-        logger.warning('Кафе не найдено', details={'cafe_id': cafe_id})
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
-            detail='Кафе не найдено',
-        )
+       logger.warning('Кафе не найдено', details={'cafe_id': cafe_id})
+       raise ResourceNotFoundError(resource_name="Кафе")
     return cafe
 
 
@@ -128,21 +122,18 @@ async def check_unique_fields(
         query = select(model).where(getattr(model, field_name) == value)
         if exclude_id is not None:
             query = query.where(model.id != exclude_id)
-
         existing = await session.scalar(query)
         if existing:
-            logger.warning(
+           logger.warning(
                 f'{field_name} уже занято',
                 details={
                     'field': field_name,
                     'value': value,
                     'exclude_id': exclude_id,
                 },
-            )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f'{field_name} занято',
-            )
+           )
+           raise DuplicateError
+            
 
 
 async def get_timeslot_or_404(
