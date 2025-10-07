@@ -222,10 +222,12 @@ async def check_cafe_name_duplicate(
     exclude_id: int | None = None,
 ) -> None:
     """Проверяет уникальность названия блюда в кафе."""
-    query = select(exists().where(Cafe.name == cafe.name))
-
+    stmt = select(Cafe.name).where(Cafe.name == cafe.name)
+    
     if exclude_id is not None:
-        query = query.where(Cafe.id != exclude_id)
+        stmt = stmt.where(Cafe.id != exclude_id)
+
+    query = select(exists(stmt))
 
     result = await session.execute(query)
     if result.scalar():
@@ -234,5 +236,5 @@ async def check_cafe_name_duplicate(
                 details={'cafe_name': cafe.name},
         )
         raise DuplicateError(
-                entity='Кафе'
+                entity='Кафе с таким именем'
         )
