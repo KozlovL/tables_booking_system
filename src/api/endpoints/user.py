@@ -14,7 +14,7 @@ from src.api.validators import check_unique_fields
 from src.core.exceptions import (ResourceNotFoundError,
                                  DuplicateError
                                  )
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/users", tags=["Пользователи"])
 
 
 @log_request()
