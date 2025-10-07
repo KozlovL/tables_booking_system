@@ -11,7 +11,7 @@ from src.models.user import User
 from src.schemas.auth import LoginRequest, TokenResponse
 from src.schemas.user import UserRead
 
-router = APIRouter(prefix='/auth', tags=['auth'])
+router = APIRouter(prefix='/auth', tags=['Аутентификация'])
 
 
 @log_request()
