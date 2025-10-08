@@ -25,7 +25,6 @@ router = APIRouter(prefix="/users", tags=["Пользователи"])
 async def create_user_endpoint(payload: UserCreate,
                                session: AsyncSession =
                                Depends(get_async_session),
-                               current_admin=Depends(require_admin),
                                ):
         user = await user_crud.create(payload, session)
         await session.commit()

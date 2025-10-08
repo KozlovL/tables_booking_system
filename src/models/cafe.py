@@ -27,7 +27,7 @@ class Cafe(Base, TimestampMixin, ActiveMixin):
     name: Mapped[str] = mapped_column(
         String(128),
         index=True,
-        unique=True,
+        #unique=True,
         nullable=False,
     )
     address: Mapped[str] = mapped_column(
