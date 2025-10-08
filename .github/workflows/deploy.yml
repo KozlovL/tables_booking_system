@@ -5,8 +5,8 @@ name: Build and Deploy to Production
 on:
   push:
     branches:
-      #- develop
-      - feature/CICD # выбрать нужную ветку
+      - develop
+      #- feature/CICD # выбрать нужную ветку
 
 env:
   IMAGE_NAME: ghcr.io/shemah77/tables_booking_system_team1
