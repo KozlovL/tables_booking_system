@@ -55,7 +55,7 @@ class CRUDBooking(CRUDBase):
                                           tables_ids,
                                           slots_ids, menu_ids)
 
-        booking = await self.get_with_relations(session, booking.id)
+        booking = await self.get_with_relations(booking.id, session)
         return booking
 
     async def _add_booking_relations(
