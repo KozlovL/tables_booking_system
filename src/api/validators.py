@@ -223,7 +223,7 @@ async def check_cafe_name_duplicate(
 ) -> None:
     """Проверяет уникальность названия блюда в кафе."""
     stmt = select(Cafe.name).where(Cafe.name == cafe.name)
-    
+
     if exclude_id is not None:
         stmt = stmt.where(Cafe.id != exclude_id)
 
@@ -248,9 +248,8 @@ async def cafe_exists_and_acitve(cafe_id: int, session: AsyncSession) -> None:
     ))
     if not await session.scalar(exists_query):
         logger.warning('Кафе не найдено', details={'cafe_id': cafe_id})
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Кафе не найдено',
+        raise ResourceNotFoundError(
+            'Кафе'
         )
 
 
@@ -261,10 +260,7 @@ async def validate_table_for_booking(
     session: AsyncSession,
 ) -> None:
     if not table_ids:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Список столов не может быть пустым'
-        )
+        raise AppException(detail='Список столов не может быть пустым')
     stmt = select(TableModel).where(
         TableModel.id.in_(table_ids),
         TableModel.cafe_id == cafe_id,
@@ -279,15 +275,13 @@ async def validate_table_for_booking(
             'Один или несколько слотов не найдены или неактивны',
             details={'cafe_id': cafe_id, 'tables': list(invalid)}
         )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+        raise AppException(
             detail='Один или несколько столов не найдены или неактивны'
         )
 
     total_seats = sum(table.seats_number for table in tables)
     if guests_number > total_seats:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+        raise AppException(
             detail=f'Общая вместимость столов {total_seats} меньше '
                    f'числа гостей {guests_number}'
         )
@@ -299,8 +293,7 @@ async def validate_slot_for_booking(
     session: AsyncSession,
 ) -> date:
     if not slot_ids:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+        raise AppException(
             detail='Список слотов не может быть пустым'
         )
     stmt = select(TimeSlot.id,  TimeSlot.date).where(
@@ -319,8 +312,7 @@ async def validate_slot_for_booking(
             'Один или несколько слотов не найдены или неактивны',
             details={'cafe_id': cafe_id, 'invalid_slot_ids': list(invalid)}
         )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+        raise ResourceNotFoundError(
             detail='Один или несколько слотов не найдены или неактивены'
         )
     slot_dates = {slot.date for slot in slots}
@@ -329,8 +321,7 @@ async def validate_slot_for_booking(
             'Все слоты должны быть на одну дату',
             details={'cafe_id': cafe_id, 'slot_dates': slot_dates}
         )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+        raise AppException(
             details='Все слоты должны быть на одну дату.',
         )
     return slot_dates.pop()
@@ -359,7 +350,6 @@ async def validate_dish_for_booking(
             'Одно или несколько блюд не найдены или неактивны',
             details={'cafe_id': cafe_id, 'invalid_slot_ids': list(invalid)}
         )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+        raise ResourceNotFoundError(
             detail='Одно или несколько блюд не найдены или неактивны'
         )

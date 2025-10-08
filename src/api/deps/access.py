@@ -23,7 +23,7 @@ def require_manager_or_admin(
     """
     if (not current_user.is_superuser
        and cafe_id not in current_user.managed_cafe_ids):
-        raise HTTPException(403, 'Доступ запрещен')  # подставить кастомный
+        raise PermissionDeniedError
 
 
 def can_view_inactive_booking(
@@ -48,5 +48,5 @@ def can_edit_booking(booking: BookingModel, user: User) -> bool:
         return True
 
     return False
-        raise PermissionDeniedError
+
 

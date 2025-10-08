@@ -1,18 +1,21 @@
-from datetime import date
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from src.core.db import get_async_session
 from src.core.auth import get_current_user
+from src.core.exceptions import (
+    ConflictError,
+    ResourceNotFoundError,
+    PermissionDeniedError,
+)
 from src.api.deps import (
-    can_view_inactive,
-    require_manager_or_admin,
     can_view_inactive_booking,
     can_edit_booking
 )
-from src.models import BookingModel, User, TimeSlot
+from src.models import BookingModel, User
 from src.crud.booking import CRUDBooking
 from src.schemas.booking import Booking, BookingCreate, BookingUpdate
 from src.api.validators import (
@@ -48,47 +51,39 @@ async def get_bookings(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    stmt = select(BookingModel)
+    if not (user.is_superuser or user.managed_cafe_ids):
+        raise PermissionDeniedError()
 
-    if user.is_superuser:
-        if not show_all:
-            stmt = stmt.where(BookingModel.active)
-    else:
-        is_manager = False
-        managed_cafe_ids = []
+    stmt = (
+        select(BookingModel)
+        .options(
+            selectinload(BookingModel.user),
+            selectinload(BookingModel.cafe),
+            selectinload(BookingModel.tables),
+            selectinload(BookingModel.slots),
+            selectinload(BookingModel.menu),
+        )
+    )
 
-        if user.managed_cafes:
-            is_manager = True
-            managed_cafe_ids = [cafe.id for cafe in user.managed_cafes]
-
-        if is_manager:
-            stmt = stmt.where(BookingModel.cafe_id.in_(managed_cafe_ids))
-            if not show_all:
-                stmt = stmt.where(BookingModel.active)
-        else:
-            stmt = stmt.where(
-                and_(
-                    BookingModel.user_id == user.id,
-                    BookingModel.active
-                )
-            )
-
-    if cafe_id:
-        stmt = stmt.where(BookingModel.cafe_id == cafe_id)
-
-    if user_id:
+    if cafe_id is not None:
         if user.is_superuser:
-            stmt = stmt.where(BookingModel.user_id == user_id)
+            stmt = stmt.where(BookingModel.cafe_id == cafe_id)
         else:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail='Недостаточно прав для фильтрации по пользователям'
-            )
+            if cafe_id not in user.managed_cafe_ids:
+                raise PermissionDeniedError()
+            stmt = stmt.where(BookingModel.cafe_id == cafe_id)
+    else:
+        if not user.is_superuser:
+            stmt = stmt.where(BookingModel.cafe_id.in_(user.managed_cafe_ids))
+
+    if user_id is not None:
+        stmt = stmt.where(BookingModel.user_id == user_id)
+
+    if not show_all:
+        stmt = stmt.where(BookingModel.active.is_(True))
 
     result = await session.execute(stmt)
-    bookings = list(result.scalars().all())
-
-    return bookings
+    return list(result.scalars().all())
 
 
 @router.get(
@@ -102,16 +97,15 @@ async def get_booking(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    booking = await crud_booking.get(booking_id, session)
+    booking = await crud_booking.get_with_relations(booking_id, session)
     if not booking:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Бронирование не найдено'
+        raise ResourceNotFoundError(
+            'Бронирование'
         )
 
     if not booking.active and not can_view_inactive_booking(booking, user):
-        raise HTTPException(
-            404, 'Бронирование не найдено'
+        raise ResourceNotFoundError(
+            'Бронирование'
         )
 
     return booking
@@ -158,8 +152,7 @@ async def create_booking(
     )
 
     if has_conflict:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
+        raise ConflictError(
             detail='Выбранные столы или время уже заняты'
         )
 
@@ -186,14 +179,12 @@ async def update_booking(
     booking = await crud_booking.get_with_relations(booking_id, session)
 
     if not booking:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Бронирование не найдено'
+        raise ResourceNotFoundError(
+            'Бронирование'
         )
 
     if not can_edit_booking(booking, user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+        raise PermissionDeniedError(
             detail='Недостаточно прав для редактирования этого бронирования'
         )
 
@@ -232,7 +223,6 @@ async def update_booking(
             dish_ids=dish_ids,
             cafe_id=cafe_id,
             session=session,
-
         )
     field_changed = any(
         k in update_data for k in ('tables', 'slots', 'cafe_id')
@@ -248,8 +238,7 @@ async def update_booking(
         )
 
         if has_conflict:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
+            raise ConflictError(
                 detail='Выбранные столы или время уже заняты'
             )
 

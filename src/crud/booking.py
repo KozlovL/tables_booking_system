@@ -1,6 +1,6 @@
 from datetime import date
 from typing import List, Optional
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -27,6 +27,8 @@ class CRUDBooking(CRUDBase):
                 selectinload(BookingModel.slots),
                 selectinload(BookingModel.tables),
                 selectinload(BookingModel.menu),
+                selectinload(BookingModel.user),
+                selectinload(BookingModel.cafe)
             )
             .where(BookingModel.id == booking_id)
         )
@@ -53,7 +55,7 @@ class CRUDBooking(CRUDBase):
                                           tables_ids,
                                           slots_ids, menu_ids)
 
-        await session.refresh(booking)
+        booking = await self.get_with_relations(session, booking.id)
         return booking
 
     async def _add_booking_relations(
