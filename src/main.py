@@ -18,3 +18,9 @@ async def startup() -> None:
         await create_first_superuser()
     else: pass
 
+@app.exception_handler(AppException)
+async def handle_app_exception(request: Request, exc: AppException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={'detail': exc.detail}
+    )
