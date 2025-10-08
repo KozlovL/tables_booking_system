@@ -278,7 +278,7 @@ async def validate_table_for_booking(
         invalid = set(table_ids) - found_ids
         logger.warning(
             'Один или несколько столов не найдены или неактивны',
-            extra={'cafe_id': cafe_id, 'tables': list(invalid)}
+            details={'cafe_id': cafe_id, 'tables': list(invalid)}
         )
         raise ResourceNotFoundError(
             resource_name='Один или несколько столов'
@@ -326,7 +326,7 @@ async def validate_slot_for_booking(
     if len(slot_dates) != 1:
         logger.warning(
             'Все слоты должны быть на одну дату',
-            extra={'cafe_id': cafe_id, 'slot_dates': slot_dates}
+            details={'cafe_id': cafe_id, 'slot_dates': slot_dates}
         )
         raise AppException(
             detail='Все слоты должны быть на одну дату.',
@@ -357,7 +357,7 @@ async def validate_dish_for_booking(
         invalid = set(unique_dish_ids) - dishes
         logger.warning(
             'Одно или несколько блюд не найдены или неактивны',
-            extra={'cafe_id': cafe_id, 'invalid_dish_ids': list(invalid)}
+            details={'cafe_id': cafe_id, 'invalid_dish_ids': list(invalid)}
         )
         raise ResourceNotFoundError(
             resource_name='Одно или несколько блюд'
