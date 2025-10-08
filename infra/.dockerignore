@@ -1,8 +1,0 @@
-.venv
-__pycache__/
-.git
-.idea
-.mypy_cache/
-.pytest_cache/
-*.pyc
-pgdata/

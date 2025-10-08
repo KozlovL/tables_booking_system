@@ -14,11 +14,7 @@ app.include_router(main_router, prefix="/api/v1")
 @app.on_event('startup')
 async def startup() -> None:
     """Функция запускается при старте приложения, создает суперпользователя."""
-    await create_first_superuser()
+    if settings.db_dialect == "sqlite":
+        await create_first_superuser()
+    else: pass
 
-@app.exception_handler(AppException)
-async def handle_app_exception(request: Request, exc: AppException):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={'detail': exc.detail}
-    )

@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from src.core.types import PhoneNumber
+from src.core.custom_types import PhoneNumber
 from src.schemas.user import UserShort
 
 
