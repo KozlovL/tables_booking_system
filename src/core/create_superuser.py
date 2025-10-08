@@ -52,7 +52,7 @@ async def main():
               " окружения (FIRST_SUPERUSER_...) заданы в .env файле.")
         sys.exit(1) # Выходим с кодом ошибки
 
-    logger.info(f"Попытка создать суперпользователя с именем '{args.username}'...")
+    logger.info(f"Попытка создать суперпользователя с именем '{args.email}'...")
     user = await create_user(
         username=args.username,
         phone=args.phone,
