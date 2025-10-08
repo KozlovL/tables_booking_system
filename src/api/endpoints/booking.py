@@ -189,9 +189,8 @@ async def update_booking(
         )
 
     update_data = booking_in.model_dump(exclude_unset=True)
-    cafe_id = update_data.get('cafe_id', booking.cafe_id)
     await cafe_exists_and_active(
-        cafe_id,
+        booking.cafe_id,
         session,
     )
 
@@ -202,7 +201,7 @@ async def update_booking(
         guests_number = update_data.get('guests_number', booking.guests_number)
         await validate_table_for_booking(
             table_ids=tables_ids,
-            cafe_id=cafe_id,
+            cafe_id=booking.cafe_id,
             guests_number=guests_number,
             session=session,
         )
@@ -210,7 +209,7 @@ async def update_booking(
     if 'slots' in update_data:
         booking_date = await validate_slot_for_booking(
             slot_ids=slots_ids,
-            cafe_id=cafe_id,
+            cafe_id=booking.cafe_id,
             session=session,
         )
         booking.booking_date = booking_date
@@ -221,16 +220,16 @@ async def update_booking(
         dish_ids = update_data.get('menu', [d.id for d in booking.menu])
         await validate_dish_for_booking(
             dish_ids=dish_ids,
-            cafe_id=cafe_id,
+            cafe_id=booking.cafe_id,
             session=session,
         )
     field_changed = any(
-        k in update_data for k in ('tables', 'slots', 'cafe_id')
+        k in update_data for k in ('tables', 'slots')
     )
     if field_changed:
         has_conflict = await crud_booking.check_booking_conflicts(
             session,
-            cafe_id,
+            booking.cafe_id,
             tables_ids,
             slots_ids,
             booking_date,

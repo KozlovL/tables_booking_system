@@ -48,5 +48,3 @@ def can_edit_booking(booking: BookingModel, user: User) -> bool:
         return True
 
     return False
-
-

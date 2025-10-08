@@ -233,7 +233,7 @@ async def check_cafe_name_duplicate(
     if result.scalar():
         logger.warning(
                 'Кафе с таким названием уже существует',
-                extra={'cafe_name': cafe.name},
+                details={'cafe_name': cafe.name},
         )
         raise DuplicateError(
                 entity='Кафе с таким именем'
@@ -249,7 +249,7 @@ async def cafe_exists_and_active(cafe_id: int, session: AsyncSession) -> None:
         )
     ))
     if not await session.scalar(exists_query):
-        logger.warning('Кафе не найдено', extra={'cafe_id': cafe_id})
+        logger.warning('Кафе не найдено', details={'cafe_id': cafe_id})
         raise ResourceNotFoundError(
             resource_name='Кафе'
         )
