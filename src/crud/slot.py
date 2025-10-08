@@ -1,14 +1,35 @@
 from datetime import date, time
-from sqlalchemy import select, and_
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.crud.base import CRUDBase
 from src.schemas.slot import TimeSlotCreate, TimeSlotUpdate
-from src.models import Cafe, TimeSlot
+from src.models import Cafe, TimeSlot, BookingModel, BookingStatus
 
 
 class CRUDTimeSlot(CRUDBase):
+
+    async def _check_no_active_bookings(
+            self, slot_id: int,
+            session: AsyncSession,
+    ):
+        """Запрещает изменять слот если он booked или active"""
+        stmt = (
+            select(BookingModel.id)
+            .join(BookingModel.slots)
+            .where(
+                TimeSlot.id == slot_id,
+                BookingModel.active.is_(True),
+                BookingModel.status.in_(
+                    [BookingStatus.BOOKED, BookingStatus.ACTIVE]
+                ),
+            )
+            .limit(1)
+        )
+        if await session.scalar(stmt) is not None:
+            print('Замени меня на кастомный обработчик ошибок')
+
     async def check_time_conflict(
         self,
         cafe_id: int,
@@ -55,12 +76,16 @@ class CRUDTimeSlot(CRUDBase):
     async def get_with_cafe(
         self,
         slot_id: int,
+        cafe_id: int,
         session: AsyncSession,
     ) -> TimeSlot | None:
         result = await session.execute(
             select(TimeSlot)
             .options(selectinload(TimeSlot.cafe).selectinload(Cafe.managers))
-            .where(TimeSlot.id == slot_id)
+            .where(
+                TimeSlot.id == slot_id,
+                TimeSlot.cafe_id == cafe_id,
+            )
         )
         return result.scalar_one_or_none()
 
@@ -90,6 +115,7 @@ class CRUDTimeSlot(CRUDBase):
         """
         Обновляет слот и возвращает обновлённый объект с загруженными связями.
         """
+        await self._check_no_active_bookings(db_obj.id, session)
         update_data = obj_in.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_obj, field, value)

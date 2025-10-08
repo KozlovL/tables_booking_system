@@ -1,4 +1,3 @@
-# src/core/db.py
 from datetime import datetime
 from typing import AsyncGenerator
 
@@ -16,13 +15,14 @@ from sqlalchemy.orm import (
 )
 
 from src.core.config import settings
+from src.core.logger import logger
 
 naming_convention = {
-    "ix": "ix_%(table_name)s_%(column_0_name)s",
-    "uq": "uq_%(table_name)s_%(column_0_name)s",
-    "ck": "ck_%(table_name)s_%(constraint_name)s",
-    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-    "pk": "pk_%(table_name)s",
+    'ix': 'ix_%(table_name)s_%(column_0_name)s',
+    'uq': 'uq_%(table_name)s_%(column_0_name)s',
+    'ck': 'ck_%(table_name)s_%(constraint_name)s',
+    'fk': 'fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s',
+    'pk': 'pk_%(table_name)s',
 }
 
 
@@ -39,16 +39,28 @@ class PreBase:
 
 
 class TimestampMixin:
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+    """Добавляет поля created_at и updated_at."""
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
 
 
 class ActiveMixin:
+    """Добавляет поле active."""
+
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
 Base = declarative_base(cls=PreBase)
-
 
 engine = create_async_engine(
     settings.database_url,
@@ -59,11 +71,13 @@ engine = create_async_engine(
 AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
-    expire_on_commit=False,   # чтобы объекты не "протухали" после commit()
-    autoflush=False,          # ручной контроль за flush()
+    expire_on_commit=False,
+    autoflush=False,
 )
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+    """Генератор асинхронной сессии SQLAlchemy."""
     async with AsyncSessionLocal() as session:
+        logger.debug('Создана новая сессия AsyncSession')
         yield session

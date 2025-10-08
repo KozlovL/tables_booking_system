@@ -17,3 +17,9 @@ class TimeSlot(Base, TimestampMixin, ActiveMixin):
                                                     nullable=True,
                                                     default=None)
     cafe = relationship('Cafe', back_populates='time_slots', lazy='selectin')
+    bookings: Mapped[list['BookingModel']] = relationship(
+        'BookingModel',
+        secondary='booking_slots',
+        back_populates='slots',
+        lazy='selectin'
+    )
