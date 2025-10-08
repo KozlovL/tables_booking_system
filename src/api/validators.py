@@ -320,7 +320,7 @@ async def validate_slot_for_booking(
             details={'cafe_id': cafe_id, 'invalid_slot_ids': list(invalid)}
         )
         raise ResourceNotFoundError(
-            detail='Один или несколько слотов'
+            resource_name='Один или несколько слотов'
         )
     slot_dates = {slot.date for slot in slots}
     if len(slot_dates) != 1:
