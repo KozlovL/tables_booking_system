@@ -317,7 +317,7 @@ async def validate_slot_for_booking(
         invalid = set(slot_ids) - found_ids
         logger.warning(
             'Один или несколько слотов не найдены или неактивны',
-            detail={'cafe_id': cafe_id, 'invalid_slot_ids': list(invalid)}
+            details={'cafe_id': cafe_id, 'invalid_slot_ids': list(invalid)}
         )
         raise ResourceNotFoundError(
             detail='Один или несколько слотов'
