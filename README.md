@@ -1,12 +1,67 @@
-# Шаблон для проектов со стилизатором Ruff
+![Python](https://img.shields.io/badge/Python-3.11|3.12-3776AB?logo=python&logoColor=white)  ![FastAPI](https://img.shields.io/badge/FastAPI-005571?logo=fastapi)  ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)  ![Postgres](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)  ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00?logo=sqlalchemy&logoColor=white)  ![Logging](https://img.shields.io/badge/Logging-FFFFFF?logo=logging&logoColor=black)
+
+# Проект «Бронирование мест в кафе»
+
+# Описание проекта:
 
 ## Основное
 
 1. Базовая версия Python - 3.11.
 2. В файле `requirements_style.txt` находятся зависимости для стилистики.
 3. В каталоге `src` находится базовая структура проекта
-4. В файле `srd/requirements.txt` прописываются базовые зависимости.
-5. В каталоге `infra` находятся настроечные файлы проекта. Здесь же размещать файлы для docker compose.
+4. В файле `src/requirements.txt` находятся базовые зависимости.
+5. В каталоге `infra` находятся настроечные файлы проекта. Здесь же размещены файлы для docker compose.
+
+## Краткая информация:
+
+Проект «Бронирование мест в кафе» - представляет собой приложение, которое предоставляет API (backend) для управления бронированием мест в кафе, просмотром и предварительным заказом меню, просмотром действующих акций.
+
+## Основной функционал:
+
+- Управление пользователями (создание/ редактирование/ блокировка-разблокировка)
+- Авторизация пользователей
+- Бронирование столов в кафе с выбором даты, времени, блюд из меню
+- Предоставление информации о действующих акциях
+- Предоставление информации о доступных блюдах
+- Управление бронированием (изменение даты, времени, меню/ отмена)
+- Напоминание о бронировании (задается для каждого бронирования)
+- Уведомление администратора о бронировании/ изменении бронирования
+
+## Для пользователей реализованы следующие роли:
+
+- Admin
+- User
+- Manager
+
+## Основные ендпоинты:
+
+- /auth – аутентификация пользователя
+- /users – управления пользователями
+- /cafes – управление кафе
+- /cafe/tables – управление столами в кафе
+- /cafe/slots – управление слотами доступного времени бронирования в кафе
+- /dishes – управление блюдами
+- /actions – управление акциями
+- /bookings – управление бронированиями
+
+## Технологии:
+
+- Python 3.11, 3.12
+- FastAPI
+- Docker
+- Postgres
+- SQLAlchemy 2.0
+- Logging
+
+## Инструкция по развёртыванию проекта
+
+* клонировать проект на компьютер `https://github.com/Studio-Yandex-Practicum/tables_booking_system_team1.git`
+* создание виртуального окружения `python3 -m venv venv`
+* запуск виртуального окружения `. venv/bin/activate`
+* установить зависимости из файла requirements.txt `pip install -r requirements.txt`
+* запуск сервера `uvicorn src.main:app`
+* запуск сервера с автоматическим рестартом `uvicorn main:app --reload`
+* применение миграций `alembic upgrade head`
 
 ## Стилистика
 
@@ -17,13 +72,15 @@
 ruff check
 ```
 
-Если одновременно надо пофиксить то, что можно поиксить автоматически, то добавляем параметр `--fix`
-```shell
-ruff check --fix
-```
+## Разработчики (исполнители):
 
-Что бы стилистика автоматически проверялась и поправлялась при комитах надо добавить hook pre-commit к git
+- https://github.com/Svetlana-Korol
+- https://github.com/RemDef
+- https://github.com/sukhoparov
+- https://github.com/shemah77
+- https://github.com/AlexSpiridonov-hll
+- https://github.com/KozlovL
+- https://github.com/AlexSkripova
+- https://github.com/Blifers
 
-```shell
-pre-commit install
-```
+### Проект выполнен в рамках выполнения этапа обучения "Проектный месяц: командная работа" в "Яндекс Практикум"

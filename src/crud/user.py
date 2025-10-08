@@ -1,20 +1,27 @@
 from __future__ import annotations
+from typing import Iterable
 
 from typing import Any, Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.logger import logger
 from src.core.security import get_password_hash
 from src.crud.base import CRUDBase
 from src.models.user import User
-from src.schemas.user import UserCreate
+from src.schemas.user import UserCreate, UserUpdate
+from src.core.exceptions import DuplicateError
 
 
 class CRUDUser(CRUDBase):
-    """CRUD из CRUDBase с логикой для пользователей."""
+    """CRUD из CRUDBase, но create делает:
+    - нормализацию username/phone/email/tg_id
+    - проверку уникальности (username, phone — всегда; email/tg_id — если заданы)
+    - хэширование пароля -> hashed_password
+    - единые дефолты для active/is_superuser
+    """
 
     model: type[User]
 
@@ -32,32 +39,34 @@ class CRUDUser(CRUDBase):
         email = obj_in.email.lower().strip() if obj_in.email else None
         tg_id = obj_in.tg_id.strip() if obj_in.tg_id else None
 
-        if not username:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST, 'Username cannot be empty',
-            )
-        if not phone:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST, 'Phone cannot be empty',
-            )
 
-        # проверка уникальности
-        conditions = [User.username == username, User.phone == phone]
-        if email:
-            conditions.append(User.email == email)
-        if tg_id:
-            conditions.append(User.tg_id == tg_id)
-
-        res = await session.execute(select(User.id).where(or_(*conditions)))
-        if res.scalar_one_or_none() is not None:
-            logger.warning(
-                'Попытка создания дубликата пользователя, совпадение полей: '
-                f'{username}/{phone}/{email}/{tg_id}',
+        # 2) проверки уникальности
+        request = select(User).where(
+            or_(
+                User.username == username,
+                User.phone == phone,
+                User.email == email if email else False,
+                User.tg_id == tg_id if tg_id else False,
             )
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                'User with same username/phone/email/tg_id already exists',
-            )
+        )
+        existing_user = (await session.execute(request)).scalar_one_or_none()
+        if existing_user:
+            if existing_user.username == username:
+                raise DuplicateError(f"Пользователь "
+                                        f"с именем '{username}' "
+                                        f"уже существует.")
+            if existing_user.phone == phone:
+                raise DuplicateError(f"Пользователь "
+                                        f"с телефоном '{phone}' "
+                                        f"уже существует.")
+            if email and existing_user.email == email:
+                raise DuplicateError(f"Пользователь "
+                                        f"с email '{email}' "
+                                        f"уже существует.")
+            if tg_id and existing_user.tg_id == tg_id:
+                raise DuplicateError(f"Пользователь "
+                                        f"с Telegram ID '{tg_id}' "
+                                        f"уже существует.")
 
         data = {
             'username': username,
@@ -102,6 +111,21 @@ class CRUDUser(CRUDBase):
 
         res = await session.execute(select(User).where(or_(*conditions)))
         return res.scalar_one_or_none()
+
+    async def get_multi_filtered(
+        self,
+        session: AsyncSession,
+        *,
+        only_active: bool = True,
+    ) -> list[User]:
+        """Возвращает всех пользователей, можно фильтровать только активные."""
+        stmt = select(self.model)
+        if only_active:
+            stmt = stmt.where(User.active.is_(True))
+        res = await session.execute(stmt)
+        users = list(res.scalars())
+        logger.info(f'Получено {len(users)} кафе (only_active={only_active})')
+        return users
 
 
 user_crud = CRUDUser(User)

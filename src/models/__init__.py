@@ -1,3 +1,4 @@
+from .action import Action  # noqa
 from .cafe import Cafe as Cafe # noqa
 from .cafe import cafe_managers_table as cafe_managers_table # noqa
 from .dish import Dish as Dish # noqa

@@ -6,14 +6,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import attributes, selectinload
 
+from src.core.exceptions import ResourceNotFoundError
 from src.core.logger import logger
 from src.crud.base import CRUDBase
 from src.models.cafe import Cafe
 from src.models.user import User
 from src.schemas.cafe import CafeCreate, CafeUpdate
-
-class ManagersNotFoundError(Exception):
-    pass
 
 class CRUDCafe(CRUDBase):
     """CRUD для работы с моделью Cafe."""
@@ -59,10 +57,7 @@ class CRUDCafe(CRUDBase):
             found_ids = {u.id for u in managers}
             missing = [mid for mid in payload.managers if mid not in found_ids]
             if missing:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail={'missing_manager_ids': missing},
-                )
+                raise ResourceNotFoundError(f"Нет таких менеджеров{missing}")
 
             attributes.set_committed_value(cafe, 'managers', [])
             cafe.managers.extend(managers)
@@ -112,21 +107,16 @@ class CRUDCafe(CRUDBase):
 
             # если переданы те же менеджеры
             if ids == current_ids:
-                print("те же менеджеры")
                 managers = cafe.managers
                 pass
 
             else:
-
                 res = await session.execute(select(User).where(User.id.in_(ids)))
                 managers = list(res.scalars())
                 found_ids = {u.id for u in managers}
                 missing = [mid for mid in ids if mid not in found_ids]
                 if missing:
-                    # Откатит верхний уровень (middleware/handler), тут просто ошибка
-                    raise ManagersNotFoundError(f"Нет таких менеджеров{missing}")
-
-
+                    raise ResourceNotFoundError(f"не найдены менедженры {missing}")
 
             cafe.managers = managers
 

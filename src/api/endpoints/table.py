@@ -5,7 +5,6 @@ from src.api.deps import can_view_inactive, require_manager_or_admin
 from src.api.validators import cafe_exists, get_table_or_404
 from src.core.db import get_async_session
 from src.core.auth import get_current_user
-from src.core.db import get_async_session
 from src.core.logger import log_request, logger
 from src.crud.table import table_crud
 from src.models import User

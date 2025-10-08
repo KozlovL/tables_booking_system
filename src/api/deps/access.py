@@ -1,5 +1,4 @@
-from fastapi import HTTPException
-
+from src.core.exceptions import PermissionDeniedError
 from src.models import User, BookingModel, BookingStatus
 
 
@@ -49,3 +48,5 @@ def can_edit_booking(booking: BookingModel, user: User) -> bool:
         return True
 
     return False
+        raise PermissionDeniedError
+
