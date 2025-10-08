@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -11,6 +11,7 @@ from src.core.logger import log_request, logger
 from src.models.cafe import Cafe as CafeModel
 from src.models.user import User
 from src.schemas.cafe import CafeCreate, CafeRead, CafeUpdate
+from src.api.validators import check_cafe_name_duplicate
 
 router = APIRouter(prefix='/cafes', tags=["Кафе"])
 
@@ -30,6 +31,10 @@ async def create_cafe(
 ) -> CafeRead:
     """Создание кафе."""
     photo_url = payload.photo if payload.photo else None
+    await check_cafe_name_duplicate(
+        payload,
+        session,
+    )
     cafe = await cafe_crud.create_with_managers(
         payload,
         session,
@@ -146,7 +151,14 @@ async def update_cafe(
     update_data = payload.model_dump(exclude_unset=True)
     photo_url = None
     if 'photo' in update_data and update_data['photo']:
-            photo_url = update_data['photo']
+        photo_url = update_data['photo']
+
+    if 'name' in update_data:
+        await check_cafe_name_duplicate(
+            payload,
+            session,
+            cafe_id
+        )
     cafe = await cafe_crud.update_with_managers(
         cafe,
         payload,

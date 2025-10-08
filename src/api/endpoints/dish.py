@@ -41,7 +41,7 @@ async def get_all_dishes(
 
     active_only = not (show_all is True and has_permission_for_inactive)
 
-    return await dish_crud.get_dishes_with_access_control(
+    dishes = await dish_crud.get_dishes_with_access_control(
         session=session,
         cafe=cafe,
         active_only=active_only,

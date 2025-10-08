@@ -1,5 +1,4 @@
-from fastapi import HTTPException
-
+from src.core.exceptions import PermissionDeniedError
 from src.models import User
 
 
@@ -24,31 +23,5 @@ def require_manager_or_admin(
     """
     if (not current_user.is_superuser
        and cafe_id not in current_user.managed_cafe_ids):
-        raise HTTPException(403, 'Доступ запрещен')  # подставить кастомный
+        raise PermissionDeniedError
 
-
-# def is_admin_or_manager(
-#         cafe: Cafe | None,
-#         current_user: User,
-# ) -> bool:
-#     """Функция проверки пользователя на статус админа или менеджера кафе."""
-#     # Если пользователь - админ, то возвращаем True
-#     if current_user.is_superuser:
-#         return True
-#     # Если пользователь есть в списке менеджеров кафе
-#     if cafe is not None and current_user in cafe.managers:
-#         return True
-#     # Если ничего не нашли возвращаем False
-#     return False
-
-
-# async def check_admin_or_manager(
-#         cafe: Cafe,
-#         current_user: User,
-# ) -> None:
-#     """Функция валидации статуса пользователя."""
-#     if not await is_admin_or_manager(cafe=cafe, current_user=current_user):
-#         raise HTTPException(
-#             status_code=HTTPStatus.UNAUTHORIZED,
-#             detail='Необходима авторизация'
-#         )
