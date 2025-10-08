@@ -19,7 +19,7 @@ from src.models import BookingModel, User
 from src.crud.booking import CRUDBooking
 from src.schemas.booking import Booking, BookingCreate, BookingUpdate
 from src.api.validators import (
-    cafe_exists_and_acitve,
+    cafe_exists_and_active,
     validate_dish_for_booking,
     validate_slot_for_booking,
     validate_table_for_booking,
@@ -100,12 +100,12 @@ async def get_booking(
     booking = await crud_booking.get_with_relations(booking_id, session)
     if not booking:
         raise ResourceNotFoundError(
-            'Бронирование'
+            resource_name='Бронирование'
         )
 
     if not booking.active and not can_view_inactive_booking(booking, user):
         raise ResourceNotFoundError(
-            'Бронирование'
+            resource_name='Бронирование'
         )
 
     return booking
@@ -123,7 +123,7 @@ async def create_booking(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    await cafe_exists_and_acitve(
+    await cafe_exists_and_active(
         booking_in.cafe_id,
         session,
     )
@@ -180,7 +180,7 @@ async def update_booking(
 
     if not booking:
         raise ResourceNotFoundError(
-            'Бронирование'
+            resource_name='Бронирование'
         )
 
     if not can_edit_booking(booking, user):
@@ -190,7 +190,7 @@ async def update_booking(
 
     update_data = booking_in.model_dump(exclude_unset=True)
     cafe_id = update_data.get('cafe_id', booking.cafe_id)
-    await cafe_exists_and_acitve(
+    await cafe_exists_and_active(
         cafe_id,
         session,
     )
