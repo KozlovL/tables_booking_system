@@ -1,20 +1,22 @@
 from datetime import date, time
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.crud.base import CRUDBase
+from src.models import BookingModel, BookingStatus, Cafe, TimeSlot
 from src.schemas.slot import TimeSlotCreate, TimeSlotUpdate
-from src.models import Cafe, TimeSlot, BookingModel, BookingStatus
 
 
 class CRUDTimeSlot(CRUDBase):
+    """CRUD операции для временных слотов."""
 
     async def _check_no_active_bookings(
             self, slot_id: int,
             session: AsyncSession,
-    ):
-        """Запрещает изменять слот если он booked или active"""
+    ) -> None:
+        """Запрещает изменять слот если он booked или active."""
         stmt = (
             select(BookingModel.id)
             .join(BookingModel.slots)
@@ -22,7 +24,7 @@ class CRUDTimeSlot(CRUDBase):
                 TimeSlot.id == slot_id,
                 BookingModel.active.is_(True),
                 BookingModel.status.in_(
-                    [BookingStatus.BOOKED, BookingStatus.ACTIVE]
+                    [BookingStatus.BOOKED, BookingStatus.ACTIVE],
                 ),
             )
             .limit(1)
@@ -40,12 +42,11 @@ class CRUDTimeSlot(CRUDBase):
         exclude_slot_id: int | None = None,
     ) -> bool:
         """Проверка, пересекается ли слот с другими."""
-
         stmt = select(TimeSlot).where(
             TimeSlot.cafe_id == cafe_id,
             TimeSlot.date == slot_date,
             TimeSlot.start_time < end_time,
-            TimeSlot.end_time > start_time
+            TimeSlot.end_time > start_time,
         )
 
         if exclude_slot_id:
@@ -61,6 +62,7 @@ class CRUDTimeSlot(CRUDBase):
         session: AsyncSession,
         include_inactive: bool = False,
     ) -> list[TimeSlot]:
+        """Получает список слотов для кафе на указанную дату."""
         stmt = select(TimeSlot).options(
             selectinload(
                 TimeSlot.cafe).selectinload(Cafe.managers)).where(
@@ -79,13 +81,14 @@ class CRUDTimeSlot(CRUDBase):
         cafe_id: int,
         session: AsyncSession,
     ) -> TimeSlot | None:
+        """Получает слот по ID с проверкой принадлежности к кафе."""
         result = await session.execute(
             select(TimeSlot)
             .options(selectinload(TimeSlot.cafe).selectinload(Cafe.managers))
             .where(
                 TimeSlot.id == slot_id,
                 TimeSlot.cafe_id == cafe_id,
-            )
+            ),
         )
         return result.scalar_one_or_none()
 
@@ -95,16 +98,16 @@ class CRUDTimeSlot(CRUDBase):
         obj_in: TimeSlotCreate,
         session: AsyncSession,
     ) -> TimeSlot:
+        """Создает новый временной слот для указанного кафе."""
         db_obj = TimeSlot(**obj_in.model_dump(), cafe_id=cafe_id)
         session.add(db_obj)
         await session.commit()
         result = await session.execute(
             select(TimeSlot)
             .options(selectinload(TimeSlot.cafe).selectinload(Cafe.managers))
-            .where(TimeSlot.id == db_obj.id)
+            .where(TimeSlot.id == db_obj.id),
         )
-        updated_obj = result.scalar_one()
-        return updated_obj
+        return result.scalar_one()
 
     async def update(
         self,
@@ -112,8 +115,9 @@ class CRUDTimeSlot(CRUDBase):
         obj_in: TimeSlotUpdate,
         session: AsyncSession,
     ) -> TimeSlot:
-        """
-        Обновляет слот и возвращает обновлённый объект с загруженными связями.
+        """Обновляет слот.
+
+        И возвращает обновлённый объект с загруженными связями.
         """
         await self._check_no_active_bookings(db_obj.id, session)
         update_data = obj_in.model_dump(exclude_unset=True)
@@ -124,7 +128,7 @@ class CRUDTimeSlot(CRUDBase):
         result = await session.execute(
             select(TimeSlot)
             .options(selectinload(TimeSlot.cafe).selectinload(Cafe.managers))
-            .where(TimeSlot.id == db_obj.id)
+            .where(TimeSlot.id == db_obj.id),
         )
 
         return result.scalar_one()

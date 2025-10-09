@@ -4,14 +4,11 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import can_view_inactive, require_manager_or_admin
-from src.api.validators import (
-    cafe_exists,
-    get_action_or_404,
-    get_cafe_or_404
-)
-from src.core.exceptions import ResourceNotFoundError
+from src.api.validators import cafe_exists, get_action_or_404, get_cafe_or_404
 from src.core.auth import get_current_user
 from src.core.db import get_async_session
+from src.core.exceptions import ResourceNotFoundError
+from src.core.logger import log_request
 from src.crud.action import action_crud
 from src.models.user import User
 from src.schemas.action import ActionCreate, ActionUpdate, ActionWithCafe
@@ -19,6 +16,7 @@ from src.schemas.action import ActionCreate, ActionUpdate, ActionWithCafe
 router = APIRouter(prefix='/actions', tags=['Акции'])
 
 
+@log_request()
 @router.get(
     "",
     response_model=List[ActionWithCafe],
@@ -41,16 +39,15 @@ async def get_actions(
 
     active_only = not (show_all is True and has_permission_for_inactive)
 
-    actions = await action_crud.get_actions_with_access_control(
+    return await action_crud.get_actions_with_access_control(
         session=session,
         cafe=cafe,
         active_only=active_only,
         current_user=current_user,
     )
 
-    return actions
 
-
+@log_request()
 @router.post(
     "",
     response_model=ActionWithCafe,
@@ -68,6 +65,7 @@ async def create_action(
     return await action_crud.create(session, action)
 
 
+@log_request()
 @router.get(
     "/{action_id}",
     response_model=ActionWithCafe,
@@ -89,6 +87,7 @@ async def get_action(
     return action_obj
 
 
+@log_request()
 @router.patch(
     "/{action_id}",
     response_model=ActionWithCafe,

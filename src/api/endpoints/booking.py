@@ -1,39 +1,39 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, status, Query
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.core.db import get_async_session
-from src.core.auth import get_current_user
-from src.core.exceptions import (
-    ConflictError,
-    ResourceNotFoundError,
-    PermissionDeniedError,
-)
-from src.api.deps import (
-    can_view_inactive_booking,
-    can_edit_booking
-)
-from src.models import BookingModel, User
-from src.crud.booking import CRUDBooking
-from src.schemas.booking import Booking, BookingCreate, BookingUpdate
+from src.api.deps import can_edit_booking, can_view_inactive_booking
 from src.api.validators import (
     cafe_exists_and_active,
     validate_dish_for_booking,
     validate_slot_for_booking,
     validate_table_for_booking,
 )
+from src.core.auth import get_current_user
+from src.core.db import get_async_session
+from src.core.exceptions import (
+    ConflictError,
+    PermissionDeniedError,
+    ResourceNotFoundError,
+)
+from src.core.logger import log_request
+from src.crud.booking import CRUDBooking
+from src.models import BookingModel, User
+from src.schemas.booking import Booking, BookingCreate, BookingUpdate
 
 router = APIRouter(prefix='/booking', tags=['Бронирование'])
 crud_booking = CRUDBooking()
 
 
+@log_request()
 @router.get(
     '',
     response_model=List[Booking],
     summary='Получить список бронирований',
-    description='Получить список бронирований с фильтрацией'
+    description='Получить список бронирований с фильтрацией',
 )
 async def get_bookings(
     show_all: Optional[bool] = Query(
@@ -50,7 +50,8 @@ async def get_bookings(
     ),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
-):
+) -> List[Booking]:
+    """Получить список бронирований."""
     if not (user.is_superuser or user.managed_cafe_ids):
         raise PermissionDeniedError()
 
@@ -86,43 +87,47 @@ async def get_bookings(
     return list(result.scalars().all())
 
 
+@log_request()
 @router.get(
     '/{booking_id}',
     response_model=Booking,
     summary='Получить бронирование по ID',
-    description='Получить детальную информацию о бронировании'
+    description='Получить детальную информацию о бронировании',
 )
 async def get_booking(
     booking_id: int,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
-):
+) -> Booking:
+    """Получить бронирование по ID."""
     booking = await crud_booking.get_with_relations(booking_id, session)
     if not booking:
         raise ResourceNotFoundError(
-            resource_name='Бронирование'
+            resource_name='Бронирование',
         )
 
     if not booking.active and not can_view_inactive_booking(booking, user):
         raise ResourceNotFoundError(
-            resource_name='Бронирование'
+            resource_name='Бронирование',
         )
 
     return booking
 
 
+@log_request()
 @router.post(
     '',
     response_model=Booking,
     status_code=status.HTTP_201_CREATED,
     summary='Создать новое бронирование',
-    description='Создать новое бронирование стола'
+    description='Создать новое бронирование стола',
 )
 async def create_booking(
     booking_in: BookingCreate,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
-):
+) -> Booking:
+    """Создать бронирование."""
     await cafe_exists_and_active(
         booking_in.cafe_id,
         session,
@@ -153,39 +158,40 @@ async def create_booking(
 
     if has_conflict:
         raise ConflictError(
-            detail='Выбранные столы или время уже заняты'
+            detail='Выбранные столы или время уже заняты',
         )
 
     booking_data = booking_in.model_dump()
     booking_data['user_id'] = user.id
     booking_data['booking_date'] = booking_date
 
-    booking = await crud_booking.create(booking_data, session)
-    return booking
+    return await crud_booking.create(booking_data, session)
 
 
+@log_request()
 @router.patch(
     '/{booking_id}',
     response_model=Booking,
     summary='Обновить бронирование',
-    description='Обновить информацию о бронировании'
+    description='Обновить информацию о бронировании',
 )
 async def update_booking(
     booking_id: int,
     booking_in: BookingUpdate,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
-):
+) -> Booking:
+    """Обновить бронирование."""
     booking = await crud_booking.get_with_relations(booking_id, session)
 
     if not booking:
         raise ResourceNotFoundError(
-            resource_name='Бронирование'
+            resource_name='Бронирование',
         )
 
     if not can_edit_booking(booking, user):
         raise PermissionDeniedError(
-            detail='Недостаточно прав для редактирования этого бронирования'
+            detail='Недостаточно прав для редактирования этого бронирования',
         )
 
     update_data = booking_in.model_dump(exclude_unset=True)
@@ -233,13 +239,12 @@ async def update_booking(
             tables_ids,
             slots_ids,
             booking_date,
-            exclude_booking_id=booking_id
+            exclude_booking_id=booking_id,
         )
 
         if has_conflict:
             raise ConflictError(
-                detail='Выбранные столы или время уже заняты'
+                detail='Выбранные столы или время уже заняты',
             )
 
-    updated_booking = await crud_booking.update(booking, booking_in, session)
-    return updated_booking
+    return await crud_booking.update(booking, booking_in, session)

@@ -1,6 +1,6 @@
 # src/schemas/user.py
 from datetime import datetime
-from typing import Optional, Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -58,13 +58,14 @@ class UserUpdate(BaseModel):
     @field_validator('username', 'password', 'tg_id', 'phone', mode='before')
     @classmethod
     def prevent_empty_str(cls, value: Any) -> Any | None:
-        """
-        Универсальный валидатор, который не позволяет передавать пустые строки
-        для текстовых полей.
+        """Универсальный валидатор.
+
+        Не позволяет передавать пустые строки для текстовых полей.
         """
         if isinstance(value, str) and len(value) == 0:
             raise ValueError("не может быть пустой строкой")
         return value
+
 
 class UserUpdateByAdmin(BaseModel):
     """Схема админ меняет данные пользователя."""
@@ -81,9 +82,9 @@ class UserUpdateByAdmin(BaseModel):
     @field_validator('username',  'tg_id', 'phone', mode='before')
     @classmethod
     def prevent_empty_str(cls, value: Any) -> Any | None:
-        """
-        Универсальный валидатор, который не позволяет передавать пустые строки
-        для текстовых полей.
+        """Универсальный валидатор.
+
+        Не позволяет передавать пустые строки для текстовых полей.
         """
         if isinstance(value, str) and len(value) == 0:
             raise ValueError("не может быть пустой строкой")

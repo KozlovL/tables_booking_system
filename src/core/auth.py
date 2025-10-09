@@ -48,7 +48,7 @@ async def get_current_user(
 
     res = await session.execute(
         select(User).where(
-            User.id == int(sub)).options(selectinload(User.managed_cafes))
+            User.id == int(sub)).options(selectinload(User.managed_cafes)),
     )
     user = res.scalars().one_or_none()
 

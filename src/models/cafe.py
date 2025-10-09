@@ -6,6 +6,7 @@ from sqlalchemy import Column, ForeignKey, Integer, String, Table, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.db import ActiveMixin, Base, TimestampMixin
+from src.models.booking import BookingModel
 
 if TYPE_CHECKING:
     from src.models.dish import Dish
@@ -66,5 +67,5 @@ class Cafe(Base, TimestampMixin, ActiveMixin):
     bookings: Mapped[list['BookingModel']] = relationship(
         'BookingModel',
         back_populates='cafe',
-        lazy='selectin'
+        lazy='selectin',
     )

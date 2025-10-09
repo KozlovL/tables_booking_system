@@ -3,15 +3,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.api.validators import check_cafe_name_duplicate
 from src.core.auth import get_current_user, require_admin
 from src.core.db import get_async_session
-from src.core.exceptions import ResourceNotFoundError, PermissionDeniedError
-from src.crud.cafe import cafe_crud
+from src.core.exceptions import PermissionDeniedError, ResourceNotFoundError
 from src.core.logger import log_request, logger
+from src.crud.cafe import cafe_crud
 from src.models.cafe import Cafe as CafeModel
 from src.models.user import User
 from src.schemas.cafe import CafeCreate, CafeRead, CafeUpdate
-from src.api.validators import check_cafe_name_duplicate
 
 router = APIRouter(prefix='/cafes', tags=["Кафе"])
 
@@ -157,7 +157,7 @@ async def update_cafe(
         await check_cafe_name_duplicate(
             payload,
             session,
-            cafe_id
+            cafe_id,
         )
     cafe = await cafe_crud.update_with_managers(
         cafe,
@@ -172,4 +172,3 @@ async def update_cafe(
             details={'cafe_id': cafe.id},
     )
     return cafe
-

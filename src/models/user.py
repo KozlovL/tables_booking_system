@@ -1,10 +1,11 @@
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from functools import cached_property
 
 from src.core.db import ActiveMixin, Base, TimestampMixin
+from src.models.booking import BookingModel
 from src.models.cafe import cafe_managers_table
 
 if TYPE_CHECKING:
@@ -64,7 +65,7 @@ class User(Base, TimestampMixin, ActiveMixin):
     bookings: Mapped[list['BookingModel']] = relationship(
         'BookingModel',
         back_populates='user',
-        lazy='selectin'
+        lazy='selectin',
     )
 
     def __repr__(self) -> str:
@@ -75,4 +76,5 @@ class User(Base, TimestampMixin, ActiveMixin):
 
     @cached_property
     def managed_cafe_ids(self) -> set[int]:
+        """Возвращает множество ID кафе, которыми управляет пользователь."""
         return {cafe.id for cafe in self.managed_cafes}

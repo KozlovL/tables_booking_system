@@ -16,11 +16,15 @@ async def startup() -> None:
     """Функция запускается при старте приложения, создает суперпользователя."""
     if settings.db_dialect == "sqlite":
         await create_first_superuser()
-    else: pass
+    else:
+        pass
+
 
 @app.exception_handler(AppException)
-async def handle_app_exception(request: Request, exc: AppException):
+async def handle_app_exception(request: Request, exc: AppException,
+                               ) -> JSONResponse:
+    """Обработчик кастомных исключений приложения."""
     return JSONResponse(
         status_code=exc.status_code,
-        content={'detail': exc.detail}
+        content={'detail': exc.detail},
     )

@@ -1,10 +1,10 @@
-from typing import List, Optional
+from typing import Optional
 
-from sqlalchemy import select, or_, and_
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.models import Cafe, User, Action
+from src.models import Action, Cafe, User
 from src.schemas.action import ActionCreate, ActionUpdate
 
 
@@ -69,7 +69,7 @@ class ActionCRUD:
         active_only: bool,
         current_user: User,
     ) -> list[Action]:
-        """Получаем список акций с фильтрацией доступа"""
+        """Получаем список акций с фильтрацией доступа."""
         query = select(Action).options(
             selectinload(Action.cafe).selectinload(Cafe.managers),
         )
@@ -78,7 +78,7 @@ class ActionCRUD:
             query = query.where(Action.cafe_id == cafe.id)
         if active_only:
             query = query.where(
-                Action.active.is_(True)
+                Action.active.is_(True),
             )
         else:
             if current_user.is_superuser:
@@ -89,9 +89,9 @@ class ActionCRUD:
                         Action.active.is_(True),
                         and_(
                             Action.active.is_(False),
-                            Action.cafe_id.in_(current_user.managed_cafe_ids)
-                        )
-                    )
+                            Action.cafe_id.in_(current_user.managed_cafe_ids),
+                        ),
+                    ),
                 )
 
         result = await session.execute(query)

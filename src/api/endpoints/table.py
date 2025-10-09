@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import can_view_inactive, require_manager_or_admin
 from src.api.validators import cafe_exists, get_table_or_404
-from src.core.db import get_async_session
 from src.core.auth import get_current_user
+from src.core.db import get_async_session
 from src.core.logger import log_request, logger
 from src.crud.table import table_crud
 from src.models import User
@@ -26,8 +26,7 @@ async def get_tables_in_cafe(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> list[Table]:
-    """
-    Возвращает список столов в указанном кафе.
+    """Возвращает список столов в указанном кафе.
 
     Права доступа:
     - Все авторизованные пользователи могут просматривать активные столы/кафе.
@@ -36,7 +35,7 @@ async def get_tables_in_cafe(
     """
     await cafe_exists(cafe_id, session)
     include_inactive = can_view_inactive(
-        cafe_id, current_user
+        cafe_id, current_user,
     )
     tables = await table_crud.get_multi_by_cafe(
         session,
@@ -66,8 +65,7 @@ async def create_table(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> Table:
-    """
-    Создает стол в указаном кафе.
+    """Создает стол в указаном кафе.
 
     Права доступа:
     - Менеджер кафе или администратор.
@@ -99,8 +97,7 @@ async def get_table_by_id(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> Table:
-    """
-    Возвращает стол в указаном кафе по ID
+    """Возвращает стол в указаном кафе по ID.
 
     Права доступа:
     - Все авторизованные пользователи могут просматривать активный стол/кафе.
@@ -108,7 +105,7 @@ async def get_table_by_id(
     """
     await cafe_exists(cafe_id, session)
     include_inactive = can_view_inactive(
-        cafe_id, current_user
+        cafe_id, current_user,
     )
     table = await get_table_or_404(
         session,
@@ -139,8 +136,7 @@ async def update_table(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> Table:
-    """
-    Изменяет стол в указаном кафе
+    """Изменяет стол в указаном кафе.
 
     Права доступа:
     - Менеджер кафе или администратор.

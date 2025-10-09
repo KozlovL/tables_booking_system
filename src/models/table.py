@@ -2,12 +2,11 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, ForeignKey, CheckConstraint
-from src.core.db import Base
+
 from src.core.db import ActiveMixin, Base, TimestampMixin
 
 if TYPE_CHECKING:
-    from src.models import Cafe, BookingModel
+    from src.models import BookingModel, Cafe
 
 
 class TableModel(Base, TimestampMixin, ActiveMixin):
@@ -29,13 +28,13 @@ class TableModel(Base, TimestampMixin, ActiveMixin):
     cafe: Mapped['Cafe'] = relationship(
         'Cafe',
         back_populates='tables',
-        lazy='selectin'
+        lazy='selectin',
         )
     bookings: Mapped[list['BookingModel']] = relationship(
         'BookingModel',
         secondary='booking_tables',
         back_populates='tables',
-        lazy='selectin'
+        lazy='selectin',
     )
 
     __table_args__ = (
