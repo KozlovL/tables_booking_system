@@ -19,7 +19,7 @@ from src.core.exceptions import (
     PermissionDeniedError,
     ResourceNotFoundError,
 )
-from src.core.logger import log_request
+from src.core.logger import log_request, logger
 from src.crud.booking import CRUDBooking
 from src.models import BookingModel, User
 from src.schemas.booking import Booking, BookingCreate, BookingUpdate
@@ -84,7 +84,20 @@ async def get_bookings(
         stmt = stmt.where(BookingModel.active.is_(True))
 
     result = await session.execute(stmt)
-    return list(result.scalars().all())
+    bookings = list(result.scalars().all())
+
+    logger.info(
+        'Получен список бронирований',
+        username=user.username,
+        user_id=user.id,
+        details={
+            'count': len(bookings),
+            'cafe_id': cafe_id,
+            'user_id': user_id,
+            'show_all': show_all
+        },
+    )
+    return bookings
 
 
 @log_request()
@@ -110,7 +123,12 @@ async def get_booking(
         raise ResourceNotFoundError(
             resource_name='Бронирование',
         )
-
+    logger.info(
+        'Получено бронирование по ID',
+        username=user.username,
+        user_id=user.id,
+        details={'booking_id': booking_id},
+    )
     return booking
 
 
@@ -165,7 +183,21 @@ async def create_booking(
     booking_data['user_id'] = user.id
     booking_data['booking_date'] = booking_date
 
-    return await crud_booking.create(booking_data, session)
+    booking = await crud_booking.create(booking_data, session)
+
+    logger.info(
+        'Создано бронирование',
+        username=user.username,
+        user_id=user.id,
+        details={
+            'booking_id': booking.id,
+            'cafe_id': booking_in.cafe_id,
+            'guests_number': booking_in.guests_number,
+            'tables_count': len(booking_in.tables),
+            'slots_count': len(booking_in.slots)
+        },
+    )
+    return booking
 
 
 @log_request()
@@ -247,4 +279,15 @@ async def update_booking(
                 detail='Выбранные столы или время уже заняты',
             )
 
-    return await crud_booking.update(booking, booking_in, session)
+    updated_booking = await crud_booking.update(booking, booking_in, session)
+
+    logger.info(
+        'Обновлено бронирование',
+        username=user.username,
+        user_id=user.id,
+        details={
+            'booking_id': booking_id,
+            'updated_fields': list(update_data.keys())
+        },
+    )
+    return updated_booking

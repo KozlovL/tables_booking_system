@@ -8,7 +8,7 @@ from src.api.validators import cafe_exists, get_action_or_404, get_cafe_or_404
 from src.core.auth import get_current_user
 from src.core.db import get_async_session
 from src.core.exceptions import ResourceNotFoundError
-from src.core.logger import log_request
+from src.core.logger import log_request, logger
 from src.crud.action import action_crud
 from src.models.user import User
 from src.schemas.action import ActionCreate, ActionUpdate, ActionWithCafe
@@ -39,12 +39,25 @@ async def get_actions(
 
     active_only = not (show_all is True and has_permission_for_inactive)
 
-    return await action_crud.get_actions_with_access_control(
+    actions = await action_crud.get_actions_with_access_control(
         session=session,
         cafe=cafe,
         active_only=active_only,
         current_user=current_user,
     )
+
+    logger.info(
+        'Получен список акций',
+        username=current_user.username,
+        user_id=current_user.id,
+        details={
+            'count': len(actions),
+            'cafe_id': cafe_id,
+            'show_all': show_all,
+            'active_only': active_only
+        },
+    )
+    return actions
 
 
 @log_request()
@@ -62,7 +75,19 @@ async def create_action(
     """Создание акции."""
     await cafe_exists(action.cafe_id, session)
     require_manager_or_admin(action.cafe_id, current_user)
-    return await action_crud.create(session, action)
+    action_obj = await action_crud.create(session, action)
+
+    logger.info(
+        'Создана акция',
+        username=current_user.username,
+        user_id=current_user.id,
+        details={
+            'action_id': action_obj.id,
+            'cafe_id': action.cafe_id,
+            'title': action.title
+        },
+    )
+    return action_obj
 
 
 @log_request()
@@ -84,6 +109,12 @@ async def get_action(
     if not include_inactive and not action_obj.active:
         raise ResourceNotFoundError('Акция')
 
+    logger.info(
+        'Получена акция по ID',
+        username=current_user.username,
+        user_id=current_user.id,
+        details={'action_id': action_id},
+    )
     return action_obj
 
 
@@ -108,4 +139,18 @@ async def update_action(
         await cafe_exists(action_update.cafe_id, session)
         require_manager_or_admin(action_update.cafe_id, current_user)
 
-    return await action_crud.update(session, action_obj, action_update)
+    updated_action = await action_crud.update(
+        session, action_obj, action_update)
+
+    logger.info(
+        'Обновлена акция',
+        username=current_user.username,
+        user_id=current_user.id,
+        details={
+            'action_id': action_id,
+            'cafe_id': action_obj.cafe_id,
+            'updated_fields': list(
+                action_update.model_dump(exclude_unset=True).keys())
+        },
+    )
+    return updated_action
