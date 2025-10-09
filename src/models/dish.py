@@ -9,6 +9,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.db import ActiveMixin, Base, TimestampMixin
+from src.models.booking import BookingModel
 from src.models.cafe import Cafe
 
 
@@ -32,7 +33,7 @@ class Dish(Base, TimestampMixin, ActiveMixin):
         'BookingModel',
         secondary='booking_dishes',
         back_populates='menu',
-        lazy='selectin'
+        lazy='selectin',
     )
 
     __table_args__ = (

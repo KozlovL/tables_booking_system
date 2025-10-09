@@ -3,12 +3,12 @@ from fastapi import APIRouter
 from .endpoints import (
     action_router,
     auth_router,
+    booking_router,
     cafe_router,
     dish_router,
     slot_router,
     table_router,
     user_router,
-    booking_router
 )
 
 main_router = APIRouter()

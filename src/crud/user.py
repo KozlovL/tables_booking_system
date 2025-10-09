@@ -1,26 +1,27 @@
 from __future__ import annotations
-from typing import Iterable
 
 from typing import Any, Optional
 
-from fastapi import HTTPException, status
-from sqlalchemy import and_, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.exceptions import DuplicateError
 from src.core.logger import logger
 from src.core.security import get_password_hash
 from src.crud.base import CRUDBase
 from src.models.user import User
-from src.schemas.user import UserCreate, UserUpdate
-from src.core.exceptions import DuplicateError
+from src.schemas.user import UserCreate
 
 
 class CRUDUser(CRUDBase):
-    """CRUD из CRUDBase, но create делает:
+    """CRUD из CRUDBase.
+
+    Но create делает:
     - нормализацию username/phone/email/tg_id
-    - проверку уникальности (username, phone — всегда; email/tg_id — если заданы)
+    - проверку уникальности:
+      (username, phone — всегда; email/tg_id — если заданы)
     - хэширование пароля -> hashed_password
-    - единые дефолты для active/is_superuser
+    - единые дефолты для active/is_superuser.
     """
 
     model: type[User]
@@ -39,7 +40,6 @@ class CRUDUser(CRUDBase):
         email = obj_in.email.lower().strip() if obj_in.email else None
         tg_id = obj_in.tg_id.strip() if obj_in.tg_id else None
 
-
         # 2) проверки уникальности
         request = select(User).where(
             or_(
@@ -47,26 +47,21 @@ class CRUDUser(CRUDBase):
                 User.phone == phone,
                 User.email == email if email else False,
                 User.tg_id == tg_id if tg_id else False,
-            )
+            ),
         )
         existing_user = (await session.execute(request)).scalar_one_or_none()
         if existing_user:
             if existing_user.username == username:
-                raise DuplicateError(f"Пользователь "
-                                        f"с именем '{username}' "
-                                        f"уже существует.")
+                raise DuplicateError(f"Пользователь с именем '{username}' ")
+
             if existing_user.phone == phone:
-                raise DuplicateError(f"Пользователь "
-                                        f"с телефоном '{phone}' "
-                                        f"уже существует.")
+                raise DuplicateError(f"Пользователь с телефоном '{phone}' ")
+
             if email and existing_user.email == email:
-                raise DuplicateError(f"Пользователь "
-                                        f"с email '{email}' "
-                                        f"уже существует.")
+                raise DuplicateError(f"Пользователь с email '{email}' ")
+
             if tg_id and existing_user.tg_id == tg_id:
-                raise DuplicateError(f"Пользователь "
-                                        f"с Telegram ID '{tg_id}' "
-                                        f"уже существует.")
+                raise DuplicateError(f"Пользователь с Telegram ID '{tg_id}' ")
 
         data = {
             'username': username,

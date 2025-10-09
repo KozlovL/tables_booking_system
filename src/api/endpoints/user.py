@@ -1,19 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.validators import check_unique_fields
 from src.core.auth import get_current_user, require_admin
 from src.core.db import get_async_session
+from src.core.exceptions import ResourceNotFoundError
 from src.core.logger import log_request, logger
 from src.core.security import get_password_hash
 from src.crud.user import user_crud
 from src.models.user import User
-from src.schemas.user import (UserCreate, UserRead, UserUpdate, UserShort,
-                              UserUpdateByAdmin)
-from src.api.validators import check_unique_fields
-from src.core.exceptions import (ResourceNotFoundError,
-                                 DuplicateError
-                                 )
+from src.schemas.user import (
+        UserCreate,
+        UserRead,
+        UserShort,
+        UserUpdate,
+        UserUpdateByAdmin,
+)
+
 router = APIRouter(prefix="/users", tags=["Пользователи"])
 
 
@@ -22,15 +25,15 @@ router = APIRouter(prefix="/users", tags=["Пользователи"])
              response_model=UserRead,
              status_code=status.HTTP_201_CREATED,
              )
-async def create_user_endpoint(payload: UserCreate,
-                               session: AsyncSession =
-                               Depends(get_async_session),
-                               ):
-        user = await user_crud.create(payload, session)
-        await session.commit()
-        await session.refresh(user)
-        return user
-
+async def create_user_endpoint(
+    payload: UserCreate,
+    session: AsyncSession = Depends(get_async_session),
+) -> UserRead:
+    """Создает нового пользователя."""
+    user = await user_crud.create(payload, session)
+    await session.commit()
+    await session.refresh(user)
+    return user
 
 
 @log_request()
@@ -68,13 +71,15 @@ async def update_me(
 ) -> UserUpdate:
     """Обновление данных текущего пользователя."""
     db_user = await user_crud.get(current_user.id, session)
+
     if not db_user:
-      logger.warning(
-            'Попытка обновления несуществующего пользователя',
-            username=current_user.username,
-            user_id=current_user.id,
-      )
-      raise ResourceNotFoundError("Пользователь")
+        logger.warning(
+                'Попытка обновления несуществующего пользователя',
+                username=current_user.username,
+                user_id=current_user.id,
+        )
+        raise ResourceNotFoundError("Пользователь")
+
     data = payload.model_dump(exclude_unset=True)
 
     # если пришёл пароль — хэшируем
@@ -93,14 +98,15 @@ async def update_me(
             session=session,
             model=User,
             exclude_id=db_user.id,
-            **fields_to_check
+            **fields_to_check,
         )
 
-    updated_user = await  user_crud.update(db_user,
-                                      data,
-                                      session,
-                                      updatable_fields=updatable
-                                      )
+    updated_user = await user_crud.update(
+        db_user,
+        data,
+        session,
+        updatable_fields=updatable,
+    )
     await session.commit()
     await session.refresh(updated_user)
 
@@ -199,12 +205,13 @@ async def get_user_by_id(
     )
     return db_user
 
+
 @router.get(
     '',
     response_model=list[UserRead],
     status_code=status.HTTP_200_OK,
     summary='Получение списка пользователей, '
-            'только для администратора '
+            'только для администратора ',
     )
 async def list_users(
     show_all: bool = Query(False,
@@ -217,7 +224,7 @@ async def list_users(
     current_user: User = Depends(require_admin),
 ) -> list[UserRead]:
     # если пользователь не админ → всегда только активные
-    """Получение списка пользователей, только для администратора"""
+    """Получение списка пользователей, только для администратора."""
     only_active = True
     if show_all:
         only_active = not show_all

@@ -1,24 +1,21 @@
 from datetime import date, datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import can_view_inactive, require_manager_or_admin
 from src.api.validators import (
-    cafe_exists, check_timeslot_intersections,
+    cafe_exists,
+    check_timeslot_intersections,
     get_timeslot_or_404,
-    get_timeslot_or_404_with_relations
-    )
+    get_timeslot_or_404_with_relations,
+)
 from src.core.auth import get_current_user
 from src.core.db import get_async_session
 from src.core.logger import log_request, logger
 from src.crud.slot import time_slot_crud
 from src.models import User
-from src.schemas import (
-    TimeSlotCreate,
-    TimeSlotRead,
-    TimeSlotUpdate
-)
-from src.api.deps import can_view_inactive, require_manager_or_admin
-
+from src.schemas import TimeSlotCreate, TimeSlotRead, TimeSlotUpdate
 
 router = APIRouter(
     prefix='/cafe/{cafe_id}/time_slots',
@@ -71,15 +68,15 @@ async def get_time_slots(
     cafe_id: int = Path(..., description='ID кафе'),
     date_param: date = Query(
         default_factory=lambda: date.today(),
-        description=('Дата (YYYY-MM-DD), по умолчанию сегодня')
+        description=('Дата (YYYY-MM-DD), по умолчанию сегодня'),
     ),
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> list[TimeSlotRead]:
-    """Получаем список timeslot в cafe_id"""
+    """Получаем список timeslot в cafe_id."""
     await cafe_exists(cafe_id, session)
     include_inactive = can_view_inactive(
-        cafe_id, current_user
+        cafe_id, current_user,
     )
     slots = await time_slot_crud.get_multi_by_cafe_and_date(
         cafe_id=cafe_id,
@@ -163,7 +160,7 @@ async def update_time_slot_by_id(
         if original_dt >= now and new_dt < now:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail='Нельзя изменить слот так, чтобы он оказался в прошлом'
+                detail='Нельзя изменить слот так, чтобы он оказался в прошлом',
             )
 
         await check_timeslot_intersections(

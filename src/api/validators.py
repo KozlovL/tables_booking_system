@@ -1,17 +1,15 @@
-from datetime import date, time, datetime
-from typing import Any, Union, Optional, Type
-from sqlalchemy import exists, select, and_
+from datetime import date, datetime, time
+from typing import Any, Optional, Type, Union
 
+from sqlalchemy import and_, exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.exceptions import AppException, DuplicateError, ResourceNotFoundError
-from src.crud.cafe import cafe_crud
-from src.crud.dish import dish_crud
-from src.crud.table import table_crud
-from src.models import Dish
-from src.models.table import TableModel
-from src.models.cafe import Cafe
 from src.core.db import Base
+from src.core.exceptions import (
+    AppException,
+    DuplicateError,
+    ResourceNotFoundError,
+)
 from src.core.logger import logger
 from src.crud import (
     action_crud,
@@ -20,7 +18,12 @@ from src.crud import (
     table_crud,
     time_slot_crud,
 )
+from src.crud.cafe import cafe_crud
+from src.crud.dish import dish_crud
+from src.crud.table import table_crud
 from src.models import Action, Cafe, Dish, TableModel, TimeSlot
+from src.models.cafe import Cafe
+from src.models.table import TableModel
 from src.schemas.cafe import CafeCreate
 
 
@@ -71,7 +74,7 @@ async def check_dish_name_duplicate(
                 details={'dish_name': dish_name, 'cafe_id': cafe.id},
         )
         raise DuplicateError(
-                entity='Блюдо'
+                entity='Блюдо',
         )
 
 
@@ -170,7 +173,7 @@ async def check_timeslot_intersections(
     timeslot_id: Optional[int] = None,
     session: AsyncSession,
 ) -> None:
-    """Проверяет пересечения временных слотов"""
+    """Проверяет пересечения временных слотов."""
     if await time_slot_crud.check_time_conflict(
         cafe_id=cafe_id,
         slot_date=slot_date,
@@ -180,7 +183,7 @@ async def check_timeslot_intersections(
         exclude_slot_id=timeslot_id,
     ):
         raise AppException(
-            detail='Временной слот пересекается с существующим!'
+            detail='Временной слот пересекается с существующим!',
         )
 
 
@@ -193,8 +196,7 @@ async def validate_and_check_conflicts(
     session: AsyncSession,
     exclude_slot_id: Optional[int] = None,
 ) -> None:
-    """Проверка для create/update слотов"""
-
+    """Проверка для create/update слотов."""
     await check_timeslot_intersections(
         cafe_id=cafe_id,
         slot_date=slot_date,
@@ -236,7 +238,7 @@ async def check_cafe_name_duplicate(
                 details={'cafe_name': cafe.name},
         )
         raise DuplicateError(
-                entity='Кафе с таким именем'
+                entity='Кафе с таким именем',
         )
 
 
@@ -245,13 +247,13 @@ async def cafe_exists_and_active(cafe_id: int, session: AsyncSession) -> None:
     exists_query = select(exists().where(
         and_(
             Cafe.id == cafe_id,
-            Cafe.active.is_(True)
-        )
+            Cafe.active.is_(True),
+        ),
     ))
     if not await session.scalar(exists_query):
         logger.warning('Кафе не найдено', details={'cafe_id': cafe_id})
         raise ResourceNotFoundError(
-            resource_name='Кафе'
+            resource_name='Кафе',
         )
 
 
@@ -261,14 +263,15 @@ async def validate_table_for_booking(
     guests_number: int,
     session: AsyncSession,
 ) -> None:
+    """Проверяет столы для бронирования."""
     if not table_ids:
         raise AppException(detail='Список столов не может быть пустым')
     stmt = select(TableModel).where(
         and_(
             TableModel.id.in_(table_ids),
             TableModel.cafe_id == cafe_id,
-            TableModel.active.is_(True)
-        )
+            TableModel.active.is_(True),
+        ),
     )
     result = await session.execute(stmt)
     found_tables = result.scalars().all()
@@ -278,17 +281,17 @@ async def validate_table_for_booking(
         invalid = set(table_ids) - found_ids
         logger.warning(
             'Один или несколько столов не найдены или неактивны',
-            details={'cafe_id': cafe_id, 'tables': list(invalid)}
+            details={'cafe_id': cafe_id, 'tables': list(invalid)},
         )
         raise ResourceNotFoundError(
-            resource_name='Один или несколько столов'
+            resource_name='Один или несколько столов',
         )
 
     total_seats = sum(table.seats_number for table in found_tables)
     if guests_number > total_seats:
         raise AppException(
             detail=f'Общая вместимость столов {total_seats} меньше '
-                   f'числа гостей {guests_number}'
+                   f'числа гостей {guests_number}',
         )
 
 
@@ -297,16 +300,17 @@ async def validate_slot_for_booking(
     cafe_id: int,
     session: AsyncSession,
 ) -> date:
+    """Проверяет слоты для бронирования."""
     if not slot_ids:
         raise AppException(
-            detail='Список слотов не может быть пустым'
+            detail='Список слотов не может быть пустым',
         )
     stmt = select(TimeSlot.id,  TimeSlot.date).where(
         and_(
             TimeSlot.id.in_(slot_ids),
             TimeSlot.cafe_id == cafe_id,
             TimeSlot.active.is_(True),
-        )
+        ),
     )
     result = await session.execute(stmt)
     slots = result.fetchall()
@@ -317,16 +321,16 @@ async def validate_slot_for_booking(
         invalid = set(slot_ids) - found_ids
         logger.warning(
             'Один или несколько слотов не найдены или неактивны',
-            details={'cafe_id': cafe_id, 'invalid_slot_ids': list(invalid)}
+            details={'cafe_id': cafe_id, 'invalid_slot_ids': list(invalid)},
         )
         raise ResourceNotFoundError(
-            resource_name='Один или несколько слотов'
+            resource_name='Один или несколько слотов',
         )
     slot_dates = {slot.date for slot in slots}
     if len(slot_dates) != 1:
         logger.warning(
             'Все слоты должны быть на одну дату',
-            details={'cafe_id': cafe_id, 'slot_dates': slot_dates}
+            details={'cafe_id': cafe_id, 'slot_dates': slot_dates},
         )
         raise AppException(
             detail='Все слоты должны быть на одну дату.',
@@ -339,6 +343,7 @@ async def validate_dish_for_booking(
     cafe_id: int,
     session: AsyncSession,
 ) -> None:
+    """Проверяет блюда для бронирования."""
     if not dish_ids:
         return
     unique_dish_ids = set(dish_ids)
@@ -348,7 +353,7 @@ async def validate_dish_for_booking(
             Dish.id.in_(unique_dish_ids),
             Dish.cafe_id == cafe_id,
             Dish.active.is_(True),
-        )
+        ),
     )
     result = await session.execute(stmt)
     dishes = set(result.scalars().all())
@@ -357,8 +362,8 @@ async def validate_dish_for_booking(
         invalid = set(unique_dish_ids) - dishes
         logger.warning(
             'Одно или несколько блюд не найдены или неактивны',
-            details={'cafe_id': cafe_id, 'invalid_dish_ids': list(invalid)}
+            details={'cafe_id': cafe_id, 'invalid_dish_ids': list(invalid)},
         )
         raise ResourceNotFoundError(
-            resource_name='Одно или несколько блюд'
+            resource_name='Одно или несколько блюд',
         )

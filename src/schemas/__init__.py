@@ -11,8 +11,8 @@ from .user import (  # noqa
     UserUpdate,
 )
 from .slot import(
-    TimeSlotRead,
-    TimeSlotCreate,
-    TimeSlotUpdate,
-    TimeSlotShort
+    TimeSlotRead as TimeSlotRead,
+    TimeSlotCreate as TimeSlotCreate,
+    TimeSlotUpdate as TimeSlotUpdate,
+    TimeSlotShort as TimeSlotShort,
 )

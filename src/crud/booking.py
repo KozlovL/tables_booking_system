@@ -1,19 +1,27 @@
 from datetime import date
-from typing import List, Optional
-from sqlalchemy import select
+from typing import Any, List, Optional
+
+from sqlalchemy import Table, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.crud.base import CRUDBase
-from src.models.booking import (BookingModel, BookingStatus,
-                                booking_tables_table, booking_slots_table,
-                                booking_dishes_table)
+from src.models.booking import (
+    BookingModel,
+    BookingStatus,
+    booking_dishes_table,
+    booking_slots_table,
+    booking_tables_table,
+)
 from src.models.slot import TimeSlot
 from src.models.table import TableModel
 
 
 class CRUDBooking(CRUDBase):
-    def __init__(self):
+    """CRUD операции для бронирований."""
+
+    def __init__(self) -> None:
+        """Инициализатор CRUDBooking."""
         super().__init__(BookingModel)
 
     async def get_with_relations(
@@ -21,6 +29,7 @@ class CRUDBooking(CRUDBase):
         booking_id: int,
         session: AsyncSession,
     ) -> BookingModel | None:
+        """Получает бронирование со всеми связями."""
         stmt = (
             select(BookingModel)
             .options(
@@ -28,7 +37,7 @@ class CRUDBooking(CRUDBase):
                 selectinload(BookingModel.tables),
                 selectinload(BookingModel.menu),
                 selectinload(BookingModel.user),
-                selectinload(BookingModel.cafe)
+                selectinload(BookingModel.cafe),
             )
             .where(BookingModel.id == booking_id)
         )
@@ -37,12 +46,13 @@ class CRUDBooking(CRUDBase):
 
     async def create(
         self,
-        obj_in,
+        obj_in: Any,
         session: AsyncSession,
         *,
         exclude_fields: set[str] | None = None,
-        **extra_fields,
-    ):
+        **extra_fields: Any,
+    ) -> BookingModel:
+        """Создает бронирование с таблицами, слотами и меню."""
         tables_ids = obj_in.pop('tables', [])
         slots_ids = obj_in.pop('slots', [])
         menu_ids = obj_in.pop('menu', [])
@@ -55,8 +65,7 @@ class CRUDBooking(CRUDBase):
                                           tables_ids,
                                           slots_ids, menu_ids)
 
-        booking = await self.get_with_relations(booking.id, session)
-        return booking
+        return await self.get_with_relations(booking.id, session)
 
     async def _add_booking_relations(
         self,
@@ -64,8 +73,9 @@ class CRUDBooking(CRUDBase):
         booking_id: int,
         tables_ids: List[int],
         slots_ids: List[int],
-        menu_ids: List[int]
-    ):
+        menu_ids: List[int],
+    ) -> None:
+        """Добавляет связи бронирования с таблицами, слотами и блюдами."""
         for table_id in tables_ids:
             stmt = booking_tables_table.insert().values(booking_id=booking_id,
                                                         table_id=table_id)
@@ -86,11 +96,12 @@ class CRUDBooking(CRUDBase):
     async def update(
         self,
         db_obj: BookingModel,
-        obj_in,
+        obj_in: Any,
         session: AsyncSession,
         *,
-        exclude_fields: set[str] | None = None
+        exclude_fields: set[str] | None = None,
     ) -> BookingModel:
+        """Обновляет бронирование и его связи."""
         update_data = obj_in.model_dump(exclude_unset=True)
 
         for field, value in update_data.items():
@@ -101,21 +112,21 @@ class CRUDBooking(CRUDBase):
             await self._update_booking_relations(
                 session, db_obj.id,
                 booking_tables_table, 'table_id',
-                update_data['tables']
+                update_data['tables'],
             )
 
         if 'slots' in update_data:
             await self._update_booking_relations(
                 session, db_obj.id,
                 booking_slots_table, 'slot_id',
-                update_data['slots']
+                update_data['slots'],
             )
 
         if 'menu' in update_data:
             await self._update_booking_relations(
                 session, db_obj.id,
                 booking_dishes_table, 'dish_id',
-                update_data['menu']
+                update_data['menu'],
             )
 
         await session.commit()
@@ -126,18 +137,19 @@ class CRUDBooking(CRUDBase):
         self,
         session: AsyncSession,
         booking_id: int,
-        relation_table,
+        relation_table: Table,
         id_column: str,
-        new_ids: List[int]
-    ):
+        new_ids: List[int],
+    ) -> None:
+        """Обновляет связи бронирования."""
         delete_stmt = relation_table.delete().where(
-            relation_table.c.booking_id == booking_id
+            relation_table.c.booking_id == booking_id,
         )
         await session.execute(delete_stmt)
         for item_id in new_ids:
             insert_stmt = relation_table.insert().values(
                 booking_id=booking_id,
-                **{id_column: item_id}
+                **{id_column: item_id},
             )
             await session.execute(insert_stmt)
 
@@ -145,8 +157,9 @@ class CRUDBooking(CRUDBase):
         self,
         session: AsyncSession,
         user_id: int,
-        active_only: bool = True
+        active_only: bool = True,
     ) -> List[BookingModel]:
+        """Получает бронирования пользователя."""
         stmt = select(BookingModel).where(BookingModel.user_id == user_id)
         if active_only:
             stmt = stmt.where(BookingModel.active)
@@ -160,9 +173,9 @@ class CRUDBooking(CRUDBase):
         table_ids: List[int],
         slot_ids: List[int],
         booking_date: date,
-        exclude_booking_id: Optional[int] = None
+        exclude_booking_id: Optional[int] = None,
     ) -> bool:
-        """Проверяет конфликты бронирований для столов и слотов"""
+        """Проверяет конфликты бронирований для столов и слотов."""
         stmt = (
             select(BookingModel)
             .join(BookingModel.slots)
@@ -172,10 +185,10 @@ class CRUDBooking(CRUDBase):
                 TimeSlot.date == booking_date,
                 BookingModel.active.is_(True),
                 BookingModel.status.in_(
-                    [BookingStatus.BOOKED, BookingStatus.ACTIVE]
+                    [BookingStatus.BOOKED, BookingStatus.ACTIVE],
                 ),
                 TableModel.id.in_(table_ids),
-                TimeSlot.id.in_(slot_ids)
+                TimeSlot.id.in_(slot_ids),
             )
         )
 
@@ -190,8 +203,9 @@ class CRUDBooking(CRUDBase):
         self,
         session: AsyncSession,
         booking_id: int,
-        status: BookingStatus
+        status: BookingStatus,
     ) -> Optional[BookingModel]:
+        """Обновляет статус бронирования."""
         booking = await self.get(booking_id, session)
         if booking:
             booking.status = status

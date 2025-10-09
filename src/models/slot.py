@@ -1,11 +1,27 @@
-from datetime import time, date as date_type
-from sqlalchemy import ForeignKey, String, Time, Date
+from datetime import date as date_type
+from datetime import time
+
+from sqlalchemy import Date, ForeignKey, String, Time
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.db import ActiveMixin, Base, TimestampMixin
+from src.models.booking import BookingModel
 
 
 class TimeSlot(Base, TimestampMixin, ActiveMixin):
+    """Модель временных слотов для бронирования в кафе.
+
+    Attributes:
+        cafe_id: ID кафе, к которому относится слот
+        date: Дата слота
+        start_time: Время начала слота
+        end_time: Время окончания слота
+        description: Описание слота (опционально)
+        cafe: Связь с моделью кафе
+        bookings: Список бронирований, связанных с этим слотом
+
+    """
+
     __tablename__ = 'time_slots'
 
     cafe_id: Mapped[int] = mapped_column(ForeignKey('cafe.id'),
@@ -21,5 +37,5 @@ class TimeSlot(Base, TimestampMixin, ActiveMixin):
         'BookingModel',
         secondary='booking_slots',
         back_populates='slots',
-        lazy='selectin'
+        lazy='selectin',
     )

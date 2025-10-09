@@ -1,18 +1,21 @@
-from datetime import date as date_type, datetime, time
-from typing import Optional
+from datetime import date as date_type
+from datetime import datetime, time
+from typing import Any, Optional, Self
+
 from pydantic import (
     BaseModel,
-    Field,
     ConfigDict,
+    Field,
     field_validator,
-    model_validator
+    model_validator,
 )
 
 from src.schemas.cafe import CafeShort
 
 
 class TimeSlotInputBase(BaseModel):
-    """Базовая схема для ввода слотов"""
+    """Базовая схема для ввода слотов."""
+
     date: Optional[date_type] = Field(None, description='Дата слота')
     start_time: Optional[time] = Field(None, description='Время начала')
     end_time: Optional[time] = Field(None, description='Время окончания')
@@ -23,7 +26,19 @@ class TimeSlotInputBase(BaseModel):
 
     @field_validator('start_time', 'end_time', mode='before')
     @classmethod
-    def normalize_time(cls, v):
+    def normalize_time(cls, v: Any) -> Optional[time]:
+        """Нормализует время, убирая секунды и микросекунды.
+
+        Args:
+            v: Входное значение времени (может быть time, str или None)
+
+        Returns:
+            Optional[time]: Нормализованное время или None
+
+        Raises:
+            ValueError: Если формат времени некорректный
+
+        """
         if v is None:
             return v
         if isinstance(v, time):
@@ -34,17 +49,27 @@ class TimeSlotInputBase(BaseModel):
         raise ValueError('Время должно быть в формате HH:MM')
 
     @model_validator(mode='after')
-    def validate_times(self):
+    def validate_times(self) -> Self:
+        """Проверяет корректность временных интервалов.
+
+        Validates:
+            - Время окончания должно быть позже времени начала
+
+        Raises:
+            ValueError: Если время окончания раньше или равно времени начала
+
+        """
         if self.start_time is not None and self.end_time is not None:
             if self.end_time <= self.start_time:
                 raise ValueError(
-                    'Время окончания должно быть позже времени начала'
+                    'Время окончания должно быть позже времени начала',
                 )
         return self
 
 
 class TimeSlotCreate(TimeSlotInputBase):
     """Схема создания слота."""
+
     date: date_type = Field(..., description='Дата слота')
     start_time: time = Field(..., description='Время начала')
     end_time: time = Field(..., description='Время окончания')
@@ -52,7 +77,13 @@ class TimeSlotCreate(TimeSlotInputBase):
     active: bool = Field(..., description='Активен ли слот')
 
     @model_validator(mode='after')
-    def validate_not_in_past(self):
+    def validate_not_in_past(self) -> Self:
+        """Проверяет, что слот не создается в прошлом.
+
+        Raises:
+            ValueError: Если дата и время слота находятся в прошлом
+
+        """
         now = datetime.now()
         slot_dt = datetime.combine(self.date, self.start_time)
         if slot_dt < now:
@@ -66,6 +97,7 @@ class TimeSlotUpdate(TimeSlotInputBase):
 
 class TimeSlotShort(BaseModel):
     """Короткая схема слотов для связи."""
+
     id: int
     cafe: CafeShort
     date: date_type = Field(..., description='Дата слота')
@@ -79,5 +111,6 @@ class TimeSlotShort(BaseModel):
 
 class TimeSlotRead(TimeSlotShort):
     """Схема для чтения слотов."""
+
     created_at: datetime
     updated_at: datetime

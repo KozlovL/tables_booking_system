@@ -1,12 +1,12 @@
 from typing import Any, Dict, Iterable, Optional, Union
 
-from sqlalchemy import select, or_, and_
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.core.logger import logger
 from src.crud.base import CRUDBase
-from src.models import Dish, Cafe, User
+from src.models import Cafe, Dish, User
 from src.schemas.dish import DishCreate, DishUpdate
 
 
@@ -91,7 +91,7 @@ class CRUDDish(CRUDBase):
         active_only: bool,
         current_user: User,
     ) -> list[Dish]:
-        """Получаем список блюд с фильтрацией доступа"""
+        """Получаем список блюд с фильтрацией доступа."""
         query = select(Dish).options(
             selectinload(Dish.cafe).selectinload(Cafe.managers),
         )
@@ -100,7 +100,7 @@ class CRUDDish(CRUDBase):
             query = query.where(Dish.cafe_id == cafe.id)
         if active_only:
             query = query.where(
-                Dish.active.is_(True)
+                Dish.active.is_(True),
             )
         else:
             if current_user.is_superuser:
@@ -111,9 +111,9 @@ class CRUDDish(CRUDBase):
                         Dish.active.is_(True),
                         and_(
                             Dish.active.is_(False),
-                            Dish.cafe_id.in_(current_user.managed_cafe_ids)
-                        )
-                    )
+                            Dish.cafe_id.in_(current_user.managed_cafe_ids),
+                        ),
+                    ),
                 )
 
         result = await session.execute(query)

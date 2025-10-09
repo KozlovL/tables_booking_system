@@ -1,7 +1,5 @@
-from http.client import HTTPException
 from typing import Optional
 
-from fastapi import status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import attributes, selectinload
@@ -12,6 +10,7 @@ from src.crud.base import CRUDBase
 from src.models.cafe import Cafe
 from src.models.user import User
 from src.schemas.cafe import CafeCreate, CafeUpdate
+
 
 class CRUDCafe(CRUDBase):
     """CRUD для работы с моделью Cafe."""
@@ -38,7 +37,7 @@ class CRUDCafe(CRUDBase):
         *,
         photo_url: Optional[str] = None,
     ) -> Cafe:
-        """ Создает кафе с менеджерами """
+        """Создает кафе с менеджерами."""
         # 1) создаём кафе через базовый CRUD, исключив поля отношений/фото
 
         cafe = await self.create(
@@ -84,20 +83,24 @@ class CRUDCafe(CRUDBase):
         *,
         photo_url: Optional[str] = None,
     ) -> Cafe:
-        """Обновляет скалярные поля (через CRUDBase.update) и,
-        если присланы managers, валидирует список ID
-        и заменяет связь many-to-many.
+        """Обновляет скалярные поля (через CRUDBase.update).
+
+        Если присланы managers, валидирует список ID и
+        заменяет связь many-to-many.
         """
         data = payload
 
-        # Фото приходит base64 -> уже сохранено снаружи -> подменяем полем photo
+        # Фото приходит base64 -> уже сохранено снаружи
+        # -> подменяем полем photo
         if "photo" in data:
 
-            # в endpoint ты решаешь: сохранить/очистить фото; сюда передаёшь photo_url/None
+            # в endpoint ты решаешь: сохранить/очистить фото;
+            # сюда передаёшь photo_url/None
             data["photo"] = photo_url
 
         # Обновляем только скалярные поля модели
-        updatable =  {"name", "address", "phone", "description", "photo", "active"}
+        updatable = {
+            "name", "address", "phone", "description", "photo", "active"}
         await self.update(cafe, data, session, updatable_fields=updatable)
 
         if payload.managers is not None:
@@ -111,12 +114,14 @@ class CRUDCafe(CRUDBase):
                 pass
 
             else:
-                res = await session.execute(select(User).where(User.id.in_(ids)))
+                res = await session.execute(
+                    select(User).where(User.id.in_(ids)))
                 managers = list(res.scalars())
                 found_ids = {u.id for u in managers}
                 missing = [mid for mid in ids if mid not in found_ids]
                 if missing:
-                    raise ResourceNotFoundError(f"не найдены менедженры {missing}")
+                    raise ResourceNotFoundError(
+                        f"не найдены менедженры {missing}")
 
             cafe.managers = managers
 
@@ -137,11 +142,11 @@ class CRUDCafe(CRUDBase):
     async def get_with_managers(
           self,
           cafe_id: int,
-          session: AsyncSession
+          session: AsyncSession,
     ) -> Cafe | None:
-        """
-        Получает объект кафе по ID, подгружая
-        связанную коллекцию менеджеров.
+        """Получает объект кафе по ID.
+
+        Подгружает связанную коллекцию менеджеров.
         """
         query = (
             select(self.model)
@@ -150,7 +155,6 @@ class CRUDCafe(CRUDBase):
         )
         result = await session.execute(query)
         return result.scalar_one_or_none()
-
 
 
 cafe_crud = CRUDCafe(Cafe)

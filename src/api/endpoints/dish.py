@@ -30,7 +30,7 @@ async def get_all_dishes(
         session: AsyncSession = Depends(get_async_session),
         show_all: bool | None = None,
         cafe_id: int | None = None,
-        current_user: User = Depends(get_current_user)
+        current_user: User = Depends(get_current_user),
 ) -> list[Dish]:
     """Список всех блюд с фильтром по активности."""
     cafe = None
@@ -76,7 +76,7 @@ async def create_dish(
     )
     require_manager_or_admin(
         cafe_id=dish.cafe_id,
-        current_user=current_user
+        current_user=current_user,
     )
     await check_dish_name_duplicate(
         dish_name=dish.name,
@@ -122,7 +122,7 @@ async def get_dish_by_id(
     await get_cafe_or_404(cafe_id=dish.cafe_id, session=session)
     if can_view_inactive(
         cafe_id=dish.cafe_id,
-        current_user=current_user
+        current_user=current_user,
     ) or dish.active is True:
         logger.info(
             'Получено блюдо',
@@ -161,11 +161,11 @@ async def update_dish(
     current_dish = await get_dish_or_404(dish_id, session)
     cafe = await get_cafe_or_404(
         cafe_id=current_dish.cafe_id,
-        session=session
+        session=session,
     )
     require_manager_or_admin(
         cafe_id=current_dish.cafe_id,
-        current_user=current_user
+        current_user=current_user,
     )
     new_cafe_id = new_dish.cafe_id
     if new_cafe_id is not None and new_cafe_id != cafe.id:
