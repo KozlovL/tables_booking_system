@@ -214,12 +214,12 @@ async def list_users(
     limit: int | None = Query(None, ge=1),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ) -> list[UserRead]:
     # если пользователь не админ → всегда только активные
     """Получение списка пользователей, только для администратора"""
     only_active = True
-    if current_user.is_superuser:
+    if show_all:
         only_active = not show_all
 
     users = await user_crud.get_multi_filtered(
