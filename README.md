@@ -108,5 +108,3 @@ ruff check
 - https://github.com/KozlovL
 - https://github.com/AlexSkripova
 - https://github.com/Blifers
-
-### Проект выполнен в рамках выполнения этапа обучения "Проектный месяц: командная работа" в "Яндекс Практикум"
